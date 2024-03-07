@@ -11,7 +11,8 @@ import {
 } from '@polar-sh/sdk'
 import { useRouter } from 'next/navigation'
 import { setValidationErrors } from 'polarkit/api/errors'
-import { Button, ShadowBoxOnMd } from 'polarkit/components/ui/atoms'
+import Button from 'polarkit/components/ui/atoms/button'
+import { ShadowBoxOnMd } from 'polarkit/components/ui/atoms/shadowbox'
 import { Form } from 'polarkit/components/ui/form'
 import {
   useArchiveSubscriptionTier,
@@ -24,8 +25,8 @@ import {
 import React, { useCallback, useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { Benefit } from '../Benefit/Benefit'
+import { ConfirmModal } from '../Modal/ConfirmModal'
 import { useModal } from '../Modal/useModal'
-import { ConfirmModal } from '../Shared/ConfirmModal'
 import SubscriptionTierBenefitsForm from './SubscriptionTierBenefitsForm'
 import SubscriptionTierCard from './SubscriptionTierCard'
 import SubscriptionTierForm from './SubscriptionTierForm'

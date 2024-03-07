@@ -14,6 +14,9 @@ from polar.subscription.service.subscription import subscription as subscription
 from polar.user.service import user as user_service
 
 from .base import BaseTransactionService, BaseTransactionServiceError
+from .processor_fee import (
+    processor_fee_transaction as processor_fee_transaction_service,
+)
 
 
 class PaymentTransactionError(BaseTransactionServiceError):
@@ -66,6 +69,7 @@ class PaymentTransactionService(BaseTransactionService):
         tax_amount = 0
         tax_country = None
         tax_state = None
+        pledge_invoice = False
         if charge.invoice:
             stripe_invoice = stripe_service.get_invoice(
                 get_expandable_id(charge.invoice)
@@ -88,8 +92,14 @@ class PaymentTransactionService(BaseTransactionService):
                 if subscription is None:
                     raise SubscriptionDoesNotExist(charge.id, stripe_subscription_id)
 
+            if (
+                stripe_invoice.metadata
+                and stripe_invoice.metadata.get("type") == ProductType.pledge
+            ):
+                pledge_invoice = True
+
         # Try to link with a Pledge
-        if charge.metadata.get("type") == ProductType.pledge:
+        if pledge_invoice or charge.metadata.get("type") == ProductType.pledge:
             assert charge.payment_intent is not None
             payment_intent = get_expandable_id(charge.payment_intent)
             pledge = await pledge_service.get_by_payment_id(session, payment_intent)
@@ -103,14 +113,6 @@ class PaymentTransactionService(BaseTransactionService):
                 payment_user = pledge.user
                 payment_organization = pledge.by_organization
 
-        # Retrieve Stripe fee
-        processor_fee_amount = 0
-        if charge.balance_transaction:
-            stripe_balance_transaction = stripe_service.get_balance_transaction(
-                get_expandable_id(charge.balance_transaction)
-            )
-            processor_fee_amount = stripe_balance_transaction.fee
-
         transaction = Transaction(
             type=TransactionType.payment,
             processor=PaymentProcessor.stripe,
@@ -121,7 +123,6 @@ class PaymentTransactionService(BaseTransactionService):
             tax_amount=tax_amount,
             tax_country=tax_country,
             tax_state=tax_state,
-            processor_fee_amount=processor_fee_amount,
             customer_id=customer_id,
             payment_user=payment_user,
             payment_organization=payment_organization,
@@ -129,6 +130,12 @@ class PaymentTransactionService(BaseTransactionService):
             pledge=pledge,
             subscription=subscription,
         )
+
+        # Compute and link fees
+        transaction_fees = await processor_fee_transaction_service.create_payment_fees(
+            session, payment_transaction=transaction
+        )
+        transaction.incurred_transactions = transaction_fees
 
         session.add(transaction)
         await session.commit()

@@ -1,17 +1,19 @@
 'use client'
 
+import AccountBalance from '@/components/Transactions/AccountBalance'
 import AccountBanner from '@/components/Transactions/AccountBanner'
+import PayoutTransactionsList from '@/components/Transactions/PayoutTransactionsList'
 import TransactionsList from '@/components/Transactions/TransactionsList'
 import { useAuth, usePersonalOrganization } from '@/hooks'
 import { TransactionType } from '@polar-sh/sdk'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+import { ShadowBoxOnMd } from 'polarkit/components/ui/atoms/shadowbox'
 import {
-  ShadowBoxOnMd,
   Tabs,
+  TabsContent,
   TabsList,
   TabsTrigger,
-} from 'polarkit/components/ui/atoms'
-import { TabsContent } from 'polarkit/components/ui/tabs'
+} from 'polarkit/components/ui/atoms/tabs'
 import {
   DataTablePaginationState,
   DataTableSortingState,
@@ -75,21 +77,27 @@ export default function ClientPage({
     personalOrganization?.account_id,
   )
 
-  const transfersHook = useSearchTransactions({
+  const balancesHook = useSearchTransactions({
     accountId: organizationAccount?.id,
-    type: TransactionType.TRANSFER,
+    type: TransactionType.BALANCE,
+    excludePlatformFees: true,
     ...getAPIParams(pagination, sorting),
   })
-  const transfers = transfersHook.data?.items || []
-  const transfersCount = transfersHook.data?.pagination.max_page ?? 1
+  const balances = balancesHook.data?.items || []
+  const balancesCount = balancesHook.data?.pagination.max_page ?? 1
 
   const payoutsHooks = useSearchTransactions({
     accountId: organizationAccount?.id,
     type: TransactionType.PAYOUT,
     ...getAPIParams(pagination, sorting),
   })
+  const refetchPayouts = payoutsHooks.refetch
   const payouts = payoutsHooks.data?.items || []
   const payoutsCount = payoutsHooks.data?.pagination.max_page ?? 1
+
+  const onWithdrawSuccess = useCallback(async () => {
+    await refetchPayouts()
+  }, [refetchPayouts])
 
   return (
     <div className="flex flex-col gap-y-6">
@@ -98,6 +106,12 @@ export default function ClientPage({
           organization={personalOrganization}
           user={currentUser}
           isPersonal
+        />
+      )}
+      {organizationAccount && (
+        <AccountBalance
+          account={organizationAccount}
+          onWithdrawSuccess={onWithdrawSuccess}
         />
       )}
       <ShadowBoxOnMd>
@@ -112,8 +126,8 @@ export default function ClientPage({
               </h2>
               <p className="dark:text-polar-500 text-sm text-gray-500">
                 {params?.get('type') === 'payouts'
-                  ? 'Made from your transfer account to your bank account'
-                  : 'Made from Polar to your connected transfer account'}
+                  ? 'Made from your account to your bank account'
+                  : 'Made from Polar to your account'}
               </p>
             </div>
 
@@ -124,8 +138,8 @@ export default function ClientPage({
           </div>
           <TabsContent value="transactions">
             <TransactionsList
-              transactions={transfers}
-              pageCount={transfersCount}
+              transactions={balances}
+              pageCount={balancesCount}
               pagination={pagination}
               onPaginationChange={setPagination}
               sorting={sorting}
@@ -133,7 +147,7 @@ export default function ClientPage({
             />
           </TabsContent>
           <TabsContent value="payouts">
-            <TransactionsList
+            <PayoutTransactionsList
               transactions={payouts}
               pageCount={payoutsCount}
               pagination={pagination}

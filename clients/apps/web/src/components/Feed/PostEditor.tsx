@@ -1,17 +1,17 @@
 import { useCurrentOrgAndRepoFromURL } from '@/hooks'
 import { Article } from '@polar-sh/sdk'
 import Link from 'next/link'
+import Button from 'polarkit/components/ui/atoms/button'
+import Input from 'polarkit/components/ui/atoms/input'
 import {
-  Button,
-  Input,
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-  ShadowBoxOnMd,
-  TabsContent,
-} from 'polarkit/components/ui/atoms'
+} from 'polarkit/components/ui/atoms/select'
+import { ShadowBoxOnMd } from 'polarkit/components/ui/atoms/shadowbox'
+import { TabsContent } from 'polarkit/components/ui/atoms/tabs'
 import { useSubscriptionBenefits } from 'polarkit/hooks'
 import React, { PropsWithChildren, useContext, useState } from 'react'
 import { DashboardBody } from '../Layout/DashboardLayout'
@@ -104,6 +104,7 @@ export const PostEditor = ({
                   body={body}
                   onTitleChange={onTitleChange}
                   disabled={disabled}
+                  article={article}
                 />
               </TabsContent>
               <TabsContent value="preview">
@@ -137,10 +138,16 @@ export const PostEditor = ({
 
 type EditorProps = Pick<
   PostEditorProps,
-  'title' | 'body' | 'onTitleChange' | 'disabled'
+  'title' | 'body' | 'onTitleChange' | 'disabled' | 'article'
 >
 
-const Editor = ({ title, body, onTitleChange, disabled }: EditorProps) => {
+const Editor = ({
+  title,
+  body,
+  onTitleChange,
+  disabled,
+  article,
+}: EditorProps) => {
   const { titleRef, bodyRef, insertTextAtCursor } =
     useContext(PostEditorContext)
 
@@ -171,6 +178,7 @@ const Editor = ({ title, body, onTitleChange, disabled }: EditorProps) => {
           className="focus:ring-none rounded-none border-none bg-transparent p-0 shadow-none outline-none focus:ring-transparent focus-visible:ring-transparent dark:bg-transparent dark:shadow-none dark:outline-none dark:focus:ring-transparent"
           value={body}
           disabled={disabled}
+          isPaidArticle={Boolean(article?.paid_subscribers_only)}
         />
       </div>
       <Sidebar />

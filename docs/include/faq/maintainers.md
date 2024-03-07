@@ -2,9 +2,9 @@
 
 ### What does Polar cost?
 
-Polar has no fixed, monthly, fees. We take a 5% commission once transfers are
-made for successfully funded & completed issues. Payment processing fees apply
-in addition (Stripe).
+Polar has no fixed, monthly, fees. We only earn when you do by taking a 5% revenue share of successful payments.
+
+Stripe transaction- and payout fees apply in addition. _We're covering this up until March 31st, 2024._
 
 
 ## Issue Funding
@@ -187,21 +187,9 @@ our thinking behind it.
 
 ## Payouts
 
-### How do I receive funding?
+### How do I receive funding & when are funds paid out?
 
-Polar is built on Stripe Connect. You can seamlessly create and connect a Stripe
-account directly within your Polar dashboard provided you live in a [supported country](#which-countries-are-supported).
-Funds will then be automatically transfered once they're ready and subsequently paid out to your bank account from Stripe.
-
----
-
-
-### When are funds paid out?
-
-Once you mark an issue as completed, we give backers a 7-day dispute & payment window (pledges). After which, we'll transfer
-the available funds (minus our commission & fees) to your connected Stripe account.
-
-You then receive Stripe payouts to your bank account based on your [Stripe Payout Schedule & Speed](https://stripe.com/docs/payouts#payout-schedule).
+Checkout our [Payout](/payment/#payouts) documentation for full details on this topic.
 
 ---
 

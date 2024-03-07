@@ -1,6 +1,6 @@
 import uuid
-from collections.abc import Callable
-from typing import TYPE_CHECKING, Literal, TypedDict, Unpack, cast
+from collections.abc import Iterator
+from typing import Literal, TypedDict, Unpack, cast
 from uuid import UUID
 
 import stripe as stripe_lib
@@ -19,10 +19,6 @@ from polar.models.pledge import Pledge
 from polar.models.repository import Repository
 from polar.models.user import User
 from polar.postgres import AsyncSession, sql
-
-if TYPE_CHECKING:
-    from stripe.api_resources.list_object import ListObject, T
-    from stripe.request_options import RequestOptions
 
 stripe_lib.api_key = settings.STRIPE_SECRET_KEY
 
@@ -160,6 +156,9 @@ class StripeService:
             "country": account.country,
             "type": "express",
             "capabilities": {"transfers": {"requested": True}},
+            "settings": {
+                "payouts": {"schedule": {"interval": "manual"}},
+            },
         }
 
         if name:
@@ -211,6 +210,7 @@ class StripeService:
         amount: int,
         *,
         source_transaction: str | None = None,
+        transfer_group: str | None = None,
         metadata: dict[str, str] | None = None,
     ) -> stripe_lib.Transfer:
         create_params: stripe_lib.Transfer.CreateParams = {
@@ -221,6 +221,8 @@ class StripeService:
         }
         if source_transaction is not None:
             create_params["source_transaction"] = source_transaction
+        if transfer_group is not None:
+            create_params["transfer_group"] = transfer_group
         return stripe_lib.Transfer.create(**create_params)
 
     def reverse_transfer(
@@ -608,7 +610,7 @@ Thank you for your support!
         account_id: str | None = None,
         payout: str | None = None,
         type: str | None = None,
-    ) -> list[stripe_lib.BalanceTransaction]:
+    ) -> Iterator[stripe_lib.BalanceTransaction]:
         params: stripe_lib.BalanceTransaction.ListParams = {
             "limit": 100,
             "stripe_account": account_id,
@@ -619,18 +621,18 @@ Thank you for your support!
         if type is not None:
             params["type"] = type
 
-        return self._list_all(stripe_lib.BalanceTransaction.list, params)
+        return stripe_lib.BalanceTransaction.list(**params).auto_paging_iter()
 
     def list_refunds(
         self,
         *,
         charge: str | None = None,
-    ) -> list[stripe_lib.Refund]:
+    ) -> Iterator[stripe_lib.Refund]:
         params: stripe_lib.Refund.ListParams = {"limit": 100}
         if charge is not None:
             params["charge"] = charge  # type: ignore
 
-        return self._list_all(stripe_lib.Refund.list, params)
+        return stripe_lib.Refund.list(**params).auto_paging_iter()
 
     def get_charge(
         self,
@@ -654,19 +656,31 @@ Thank you for your support!
             id, stripe_account=stripe_account, expand=expand or []
         )
 
-    def _list_all(
-        self, method: Callable[..., "ListObject[T]"], params: "RequestOptions"
-    ) -> list["T"]:
-        results: list["T"] = []
-        has_more = True
-        while has_more:
-            page = method(**params)
-            results += page.data
-            has_more = page.has_more
-            if has_more:
-                params["starting_after"] = page.data[-1].id  # type: ignore
+    def get_dispute(
+        self,
+        id: str,
+        *,
+        stripe_account: str | None = None,
+        expand: list[str] | None = None,
+    ) -> stripe_lib.Dispute:
+        return stripe_lib.Dispute.retrieve(
+            id, stripe_account=stripe_account, expand=expand or []
+        )
 
-        return results
+    def create_payout(
+        self,
+        *,
+        stripe_account: str,
+        amount: int,
+        currency: str,
+        metadata: dict[str, str] | None = None,
+    ) -> stripe_lib.Payout:
+        return stripe_lib.Payout.create(
+            stripe_account=stripe_account,
+            amount=amount,
+            currency=currency,
+            metadata=metadata or {},
+        )
 
 
 stripe = StripeService()

@@ -3,6 +3,7 @@ from fastapi import APIRouter
 from polar.account.endpoints import router as accounts_router
 from polar.advertisement.endpoints import router as advertisements_router
 from polar.article.endpoints import router as articles_router
+from polar.auth.endpoints import router as auth_router
 from polar.backoffice.endpoints import router as backoffice_router
 from polar.dashboard.endpoints import router as dashboard_router
 from polar.eventstream.endpoints import router as stream_router
@@ -22,6 +23,7 @@ from polar.pull_request.endpoints import router as pull_requests_router
 from polar.repository.endpoints import router as repository_router
 from polar.reward.endpoints import router as rewards_router
 from polar.subscription.endpoints import router as subscription_router
+from polar.traffic.endpoints import router as traffic_router
 from polar.transaction.endpoints import router as transaction_router
 from polar.user.endpoints import router as user_router
 from polar.webhook_notifications.endpoints import router as webhook_notifications_router
@@ -80,3 +82,7 @@ router.include_router(transaction_router)
 router.include_router(webhook_notifications_router)
 # /advertisements
 router.include_router(advertisements_router)
+# /traffic
+router.include_router(traffic_router)
+# /auth
+router.include_router(auth_router)

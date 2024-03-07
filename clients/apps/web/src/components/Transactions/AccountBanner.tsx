@@ -2,7 +2,7 @@ import { ExclamationCircleIcon } from '@heroicons/react/20/solid'
 import { AccountType, Organization, Status, UserRead } from '@polar-sh/sdk'
 import Link from 'next/link'
 import { ACCOUNT_TYPE_DISPLAY_NAMES, ACCOUNT_TYPE_ICON } from 'polarkit/account'
-import { Button } from 'polarkit/components/ui/atoms'
+import Button from 'polarkit/components/ui/atoms/button'
 import { Banner } from 'polarkit/components/ui/molecules'
 import { useAccount } from 'polarkit/hooks'
 import Icon from '../Icons/Icon'
@@ -144,9 +144,9 @@ const AccountBanner: React.FC<AccountBannerProps> = ({
           <Icon classes="bg-blue-500 p-1" icon={<AccountTypeIcon />} />
           <span className="dark:text-polar-400 text-sm">
             {accountType === AccountType.STRIPE &&
-              'Transfers will be sent to the connected Stripe account'}
+              'Payouts will be made to the connected Stripe account'}
             {accountType === AccountType.OPEN_COLLECTIVE &&
-              'Transfers will be sent in bulk once per month to the connected Open Collective account'}
+              'Payouts will be made in bulk once per month to the connected Open Collective account'}
           </span>
         </Banner>
       </>

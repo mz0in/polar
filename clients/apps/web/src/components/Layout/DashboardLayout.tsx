@@ -25,7 +25,7 @@ import DashboardNavigation from '../Dashboard/DashboardNavigation'
 import MaintainerNavigation from '../Dashboard/MaintainerNavigation'
 import MaintainerRepoSelection from '../Dashboard/MaintainerRepoSelection'
 import MetaNavigation from '../Dashboard/MetaNavigation'
-import ProfileSelection from '../Shared/ProfileSelection'
+import DashboardProfileDropdown from '../Navigation/DashboardProfileDropdown'
 import DashboardLayoutContext, {
   useDashboardLayoutContext,
 } from './DashboardLayoutContext'
@@ -81,7 +81,10 @@ const DashboardSidebar = () => {
           </div>
           <div className="mb-4 mt-8 flex px-4">
             {currentUser && (
-              <ProfileSelection useOrgFromURL={true} className="shadow-xl" />
+              <DashboardProfileDropdown
+                useOrgFromURL={true}
+                className="shadow-xl"
+              />
             )}
           </div>
         </div>
@@ -102,13 +105,7 @@ const DashboardSidebar = () => {
 }
 
 const DashboardLayout = (props: PropsWithChildren<{ className?: string }>) => {
-  const { hydrated } = useAuth()
-
   const layoutContext = useDashboardLayoutContext()
-
-  if (!hydrated) {
-    return <></>
-  }
 
   const marginTop = layoutContext.isMD ? layoutContext.topbarHeight || 80 : 0
 
@@ -232,6 +229,17 @@ export const DashboardBody = (props: {
         props.className,
       )}
     >
+      {props.children}
+    </div>
+  )
+}
+
+export const DashboardPaddingX = (props: {
+  children?: React.ReactNode
+  className?: string
+}) => {
+  return (
+    <div className={twMerge('px-4 sm:px-6 md:px-8', props.className)}>
       {props.children}
     </div>
   )

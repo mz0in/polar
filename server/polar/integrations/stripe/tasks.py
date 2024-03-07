@@ -4,7 +4,6 @@ from arq import Retry
 
 from polar.account.service import account as account_service
 from polar.exceptions import PolarError
-from polar.held_transfer.service import held_transfer as held_transfer_service
 from polar.integrations.stripe.schemas import (
     PaymentIntentSuccessWebhook,
     ProductType,
@@ -12,6 +11,7 @@ from polar.integrations.stripe.schemas import (
 from polar.pledge.service import pledge as pledge_service
 from polar.subscription.service.subscription import SubscriptionDoesNotExist
 from polar.subscription.service.subscription import subscription as subscription_service
+from polar.transaction.service.balance import PaymentTransactionForChargeDoesNotExist
 from polar.transaction.service.dispute import (
     DisputeUnknownPaymentTransaction,
 )
@@ -33,7 +33,6 @@ from polar.transaction.service.payout import (
 from polar.transaction.service.refund import (
     refund_transaction as refund_transaction_service,
 )
-from polar.transaction.service.transfer import PaymentTransactionForChargeDoesNotExist
 from polar.worker import AsyncSessionMaker, JobContext, PolarWorkerContext, task
 
 from .service import stripe as stripe_service
@@ -65,11 +64,9 @@ async def account_updated(
     with polar_context.to_execution_context():
         async with AsyncSessionMaker(ctx) as session:
             stripe_account: stripe.Account = event["data"]["object"]
-            account = await account_service.update_account_from_stripe(
+            await account_service.update_account_from_stripe(
                 session, stripe_account=stripe_account
             )
-            if account.can_receive_transfers():
-                await held_transfer_service.release_account(session, account)
 
 
 @task("stripe.webhook.payment_intent.succeeded")
@@ -194,20 +191,6 @@ async def charge_dispute_funds_reinstated(
             )
 
 
-@task("stripe.webhook.payout.paid")
-async def payout_paid(
-    ctx: JobContext, event: stripe.Event, polar_context: PolarWorkerContext
-) -> None:
-    if event.account is None:
-        raise UnsetAccountOnPayoutEvent(event.id)
-    with polar_context.to_execution_context():
-        async with AsyncSessionMaker(ctx) as session:
-            payout = event["data"]["object"]
-            await payout_transaction_service.create_payout_from_stripe(
-                session=session, payout=payout, stripe_account_id=event.account
-            )
-
-
 @task("stripe.webhook.customer.subscription.created")
 async def customer_subscription_created(
     ctx: JobContext, event: stripe.Event, polar_context: PolarWorkerContext
@@ -288,3 +271,17 @@ async def invoice_paid(
                     raise Retry(DELAY ** ctx["job_try"]) from e
                 else:
                     raise
+
+
+@task("stripe.webhook.payout.paid")
+async def payout_paid(
+    ctx: JobContext, event: stripe.Event, polar_context: PolarWorkerContext
+) -> None:
+    if event.account is None:
+        raise UnsetAccountOnPayoutEvent(event.id)
+    with polar_context.to_execution_context():
+        async with AsyncSessionMaker(ctx) as session:
+            payout = event["data"]["object"]
+            await payout_transaction_service.create_payout_from_stripe(
+                session, payout=payout, stripe_account_id=event.account
+            )

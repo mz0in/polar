@@ -31,12 +31,14 @@ class TransactionType(StrEnum):
 
     payment = "payment"
     """Polar received a payment."""
+    processor_fee = "processor_fee"
+    """A payment processor fee was charged to Polar."""
     refund = "refund"
     """Polar refunded a payment (totally or partially)."""
     dispute = "dispute"
     """A Polar payment is disputed (totally or partially)."""
-    transfer = "transfer"
-    """Money transfer between Polar and a user's account."""
+    balance = "balance"
+    """Money flow between Polar and a user's account."""
     payout = "payout"
     """Money paid to the user's bank account."""
 
@@ -50,6 +52,113 @@ class PaymentProcessor(StrEnum):
     open_collective = "open_collective"
 
 
+class ProcessorFeeType(StrEnum):
+    """
+    Type of fees applied by payment processors, and billed to the users.
+    """
+
+    payment = "payment"
+    """
+    Fee applied to a payment, like a credit card fee.
+    """
+
+    refund = "refund"
+    """
+    Fee applied when a refund is issued.
+    """
+
+    dispute = "dispute"
+    """
+    Fee applied when a dispute is opened. Usually crazy high.
+    """
+
+    tax = "tax"
+    """
+    Fee applied for automatic tax calculation and collection.
+
+    For Stripe, it corresponds to **0.5% of the amount**.
+    """
+
+    subscription = "subscription"
+    """
+    Fee applied to a recurring subscription.
+
+    For Stripe, it corresponds to **0.5% of the subscription amount**.
+    """
+
+    invoice = "invoice"
+    """
+    Fee applied to an issued invoice.
+
+    For Stripe, it corresponds to **0.4%%** on Starter, **0.5%** on Plus of the amount.
+    """
+
+    cross_border_transfer = "cross_border_transfer"
+    """
+    Fee applied when money is transferred to a different country than Polar's.
+
+    For Stripe, it varies per country. Usually around **0.25% and 1% of the amount**.
+    """
+
+    payout = "payout"
+    """
+    Fee applied when money is paid out to the user's bank account.
+
+    For Stripe, it's **0.25% of the amount + 0.25$ per payout**.
+    """
+
+    account = "account"
+    """
+    Fee applied recurrently to an active account.
+
+    For Stripe, it's **2$ per month**.
+    It considers an account active if a payout has been made in the month.
+    """
+
+
+class PlatformFeeType(StrEnum):
+    """
+    Type of fees applied by Polar, and billed to the users.
+    """
+
+    platform = "platform"
+    """
+    Polar platform fee.
+    """
+
+    payment = "payment"
+    """
+    Fee applied by the payment processor to a payment, like a credit card fee.
+    """
+
+    subscription = "subscription"
+    """
+    Fee applied by the payment processor to a recurring subscription.
+    """
+
+    invoice = "invoice"
+    """
+    Fee applied by the payment processor to an issued invoice.
+    """
+
+    cross_border_transfer = "cross_border_transfer"
+    """
+    Fee applied by the payment processor when money is transferred
+    to a different country than Polar's.
+    """
+
+    payout = "payout"
+    """
+    Fee applied by the payment processor when money
+    is paid out to the user's bank account.
+    """
+
+    account = "account"
+    """
+    Fee applied recurrently by the payment processor to an active account.
+    """
+
+
 class Transaction(RecordModel):
     """
     Represent a money flow in the Polar system.
@@ -59,10 +168,10 @@ class Transaction(RecordModel):
 
     type: Mapped[TransactionType] = mapped_column(String, nullable=False, index=True)
     """Type of transaction."""
-    processor: Mapped[PaymentProcessor] = mapped_column(
-        String, nullable=False, index=True
+    processor: Mapped[PaymentProcessor | None] = mapped_column(
+        String, nullable=True, index=True
     )
-    """Payment processor."""
+    """Payment processor. For TransactionType.balance, it should be `None`."""
 
     currency: Mapped[str] = mapped_column(String(3), nullable=False)
     """Currency of this transaction from Polar's perspective. Should be `usd`."""
@@ -78,15 +187,30 @@ class Transaction(RecordModel):
     """Country for which Polar collected the tax."""
     tax_state: Mapped[str] = mapped_column(String(2), nullable=True, index=True)
     """State for which Polar collected the tax."""
-    processor_fee_amount: Mapped[int] = mapped_column(Integer, nullable=False)
-    """Fee collected by the payment processor for this transaction."""
 
-    transfer_correlation_key: Mapped[str] = mapped_column(
+    processor_fee_type: Mapped[ProcessorFeeType | None] = mapped_column(
         String, nullable=True, index=True
     )
     """
-    Internal key used to correlate a couple of transfer transactions:
+    Type of processor fee. Only applies to transactions of type `TransactionType.processor_fee`.
+    """
+
+    balance_correlation_key: Mapped[str] = mapped_column(
+        String, nullable=True, index=True
+    )
+    """
+    Internal key used to correlate a couple of balance transactions:
     the outgoing side and the incoming side.
+    """
+
+    platform_fee_type: Mapped[PlatformFeeType | None] = mapped_column(
+        String, nullable=True, index=True
+    )
+    """
+    Type of platform fee.
+
+    Only applies to transactions of type `TransactionType.balance`
+    with a set `account_id`.
     """
 
     customer_id: Mapped[str | None] = mapped_column(String, nullable=True, index=True)
@@ -105,6 +229,10 @@ class Transaction(RecordModel):
     """ID of the transfer reversal in the payment processor system."""
     payout_id: Mapped[str | None] = mapped_column(String, nullable=True, index=True)
     """ID of the payout in the payment processor system."""
+    fee_balance_transaction_id: Mapped[str | None] = mapped_column(
+        String, nullable=True, index=True
+    )
+    """ID of the fee's balance transaction in the payment processor system."""
 
     account_id: Mapped[UUID | None] = mapped_column(
         PostgresUUID,
@@ -201,12 +329,12 @@ class Transaction(RecordModel):
                 cls.id,  # type: ignore
             ],
             foreign_keys="[Transaction.payment_transaction_id]",
-            back_populates="transfer_transactions",
+            back_populates="balance_transactions",
         )
 
     @declared_attr
-    def transfer_transactions(cls) -> Mapped[list["Transaction"]]:
-        """Transactions that transferred this payment transaction."""
+    def balance_transactions(cls) -> Mapped[list["Transaction"]]:
+        """Transactions that were balanced by this payment transaction."""
         return relationship(
             "Transaction",
             lazy="raise",
@@ -214,17 +342,17 @@ class Transaction(RecordModel):
             foreign_keys="[Transaction.payment_transaction_id]",
         )
 
-    transfer_reversal_transaction_id: Mapped[UUID | None] = mapped_column(
+    balance_reversal_transaction_id: Mapped[UUID | None] = mapped_column(
         PostgresUUID,
         ForeignKey("transactions.id", ondelete="set null"),
         nullable=True,
         index=True,
     )
-    """ID of the transfer transaction that reverses this transaction."""
+    """ID of the balance transaction which is reversed by this transaction."""
 
     @declared_attr
-    def transfer_reversal_transaction(cls) -> Mapped["Transaction | None"]:
-        """Transfer transaction that reverses this transaction."""
+    def balance_reversal_transaction(cls) -> Mapped["Transaction | None"]:
+        """Balance transaction which is reversed by this transaction."""
         return relationship(
             "Transaction",
             lazy="raise",
@@ -232,7 +360,18 @@ class Transaction(RecordModel):
             remote_side=[
                 cls.id,  # type: ignore
             ],
-            foreign_keys="[Transaction.transfer_reversal_transaction_id]",
+            foreign_keys="[Transaction.balance_reversal_transaction_id]",
+            back_populates="balance_reversal_transactions",
+        )
+
+    @declared_attr
+    def balance_reversal_transactions(cls) -> Mapped[list["Transaction"]]:
+        """Balance transactions that reverses this transaction."""
+        return relationship(
+            "Transaction",
+            lazy="raise",
+            foreign_keys="[Transaction.balance_reversal_transaction_id]",
+            back_populates="balance_reversal_transaction",
         )
 
     payout_transaction_id: Mapped[UUID | None] = mapped_column(
@@ -266,3 +405,78 @@ class Transaction(RecordModel):
             back_populates="payout_transaction",
             foreign_keys="[Transaction.payout_transaction_id]",
         )
+
+    incurred_by_transaction_id: Mapped[UUID | None] = mapped_column(
+        PostgresUUID,
+        ForeignKey("transactions.id", ondelete="set null"),
+        nullable=True,
+        index=True,
+    )
+    """
+    ID of the transaction that incurred this transaction.
+    Generally applies to transactions of type `TransactionType.processor_fee`
+    or platform fees balances.
+    """
+
+    @declared_attr
+    def incurred_by_transaction(cls) -> Mapped["Transaction | None"]:
+        """
+        Transaction that incurred this transaction.
+        Generally applies to transactions of type `TransactionType.processor_fee`
+        or platform fees balances.
+        """
+        return relationship(
+            "Transaction",
+            lazy="raise",
+            # Ref: https://docs.sqlalchemy.org/en/20/orm/self_referential.html
+            remote_side=[
+                cls.id,  # type: ignore
+            ],
+            back_populates="incurred_transactions",
+            foreign_keys="[Transaction.incurred_by_transaction_id]",
+        )
+
+    @declared_attr
+    def incurred_transactions(cls) -> Mapped[list["Transaction"]]:
+        """Transactions that were incurred by this transaction."""
+        return relationship(
+            "Transaction",
+            lazy="raise",
+            back_populates="incurred_by_transaction",
+            foreign_keys="[Transaction.incurred_by_transaction_id]",
+        )
+
+    @declared_attr
+    def account_incurred_transactions(cls) -> Mapped[list["Transaction"]]:
+        """
+        Transactions that were incurred by this transaction,
+        filtered on the current transaction account.
+        """
+        return relationship(
+            "Transaction",
+            lazy="raise",
+            foreign_keys="[Transaction.incurred_by_transaction_id]",
+            primaryjoin=(
+                "and_("
+                "foreign(Transaction.incurred_by_transaction_id) == Transaction.id, "
+                "foreign(Transaction.account_id) == Transaction.account_id,"
+                ")"
+            ),
+            viewonly=True,
+        )
+
+    @property
+    def incurred_amount(self) -> int:
+        return sum(
+            transaction.amount for transaction in self.account_incurred_transactions
+        )
+
+    @property
+    def gross_amount(self) -> int:
+        inclusive = 0 if self.type == TransactionType.balance else 1
+        return self.amount + inclusive * self.incurred_amount
+
+    @property
+    def net_amount(self) -> int:
+        inclusive = 1 if self.type == TransactionType.balance else -1
+        return self.gross_amount + inclusive * self.incurred_amount

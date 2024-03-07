@@ -2,7 +2,7 @@ import { DashboardBody } from '@/components/Layout/DashboardLayout'
 import { getServerSideAPI } from '@/utils/api'
 import { Platforms, SubscriptionTierType } from '@polar-sh/sdk'
 import { Metadata, ResolvingMetadata } from 'next'
-import SubscriptionsOverview from './SubscriptionsOverview'
+import ClientPage from './ClientPage'
 
 export async function generateMetadata(
   {
@@ -34,16 +34,16 @@ export default async function Page({
   startOfMonth.setUTCHours(0, 0, 0, 0)
   startOfMonth.setUTCDate(1)
 
-  const startOfMonthThreeMonthsAgo = new Date()
-  startOfMonthThreeMonthsAgo.setUTCHours(0, 0, 0, 0)
-  startOfMonthThreeMonthsAgo.setUTCDate(1)
-  startOfMonthThreeMonthsAgo.setUTCMonth(startOfMonth.getMonth() - 5)
+  const startOfMonthSixMonthsAgo = new Date()
+  startOfMonthSixMonthsAgo.setUTCHours(0, 0, 0, 0)
+  startOfMonthSixMonthsAgo.setUTCDate(1)
+  startOfMonthSixMonthsAgo.setUTCMonth(startOfMonth.getMonth() - 5)
 
   return (
     <DashboardBody>
-      <SubscriptionsOverview
+      <ClientPage
         organization={organization}
-        startDate={startOfMonthThreeMonthsAgo}
+        startDate={startOfMonthSixMonthsAgo}
         endDate={startOfMonth}
         subscriptionTierType={searchParams.type}
         subscriptionTierId={searchParams.subscription_tier_id}

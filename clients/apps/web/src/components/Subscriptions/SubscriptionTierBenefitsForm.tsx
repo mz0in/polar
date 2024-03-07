@@ -25,9 +25,10 @@ import {
   getBotDiscordAuthorizeURL,
   getGitHubOrganizationInstallationURL,
 } from 'polarkit/auth'
+import { Switch } from 'polarkit/components/ui/atoms'
+import Button from 'polarkit/components/ui/atoms/button'
+import Input from 'polarkit/components/ui/atoms/input'
 import {
-  Button,
-  Input,
   Select,
   SelectContent,
   SelectGroup,
@@ -35,9 +36,9 @@ import {
   SelectLabel,
   SelectSeparator,
   SelectTrigger,
-  Switch,
-  TextArea,
-} from 'polarkit/components/ui/atoms'
+  SelectValue,
+} from 'polarkit/components/ui/atoms/select'
+import TextArea from 'polarkit/components/ui/atoms/textarea'
 import { Checkbox } from 'polarkit/components/ui/checkbox'
 import {
   DropdownMenu,
@@ -54,7 +55,6 @@ import {
   FormLabel,
   FormMessage,
 } from 'polarkit/components/ui/form'
-import { SelectValue } from 'polarkit/components/ui/select'
 import {
   useCheckOrganizationPermissions,
   useCreateSubscriptionBenefit,
@@ -71,8 +71,8 @@ import { useForm, useFormContext } from 'react-hook-form'
 import { twMerge } from 'tailwind-merge'
 import { Benefit } from '../Benefit/Benefit'
 import { Modal } from '../Modal'
+import { ConfirmModal } from '../Modal/ConfirmModal'
 import { useModal } from '../Modal/useModal'
-import { ConfirmModal } from '../Shared/ConfirmModal'
 import {
   CreatableSubscriptionBenefit,
   SubscriptionBenefit,

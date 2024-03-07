@@ -5,7 +5,7 @@ from polar.kit.schemas import Schema, TimestampedSchema
 from polar.models.pledge import PledgeState
 from polar.models.subscription import SubscriptionStatus
 from polar.models.subscription_tier import SubscriptionTierType
-from polar.models.transaction import PaymentProcessor, TransactionType
+from polar.models.transaction import PaymentProcessor, PlatformFeeType, TransactionType
 
 
 class TransactionRepository(TimestampedSchema):
@@ -66,25 +66,36 @@ class TransactionSubscription(TimestampedSchema):
     subscription_tier: TransactionSubscriptionTier
 
 
-class Transaction(TimestampedSchema):
+class TransactionEmbedded(TimestampedSchema):
     id: UUID4
     type: TransactionType
-    processor: PaymentProcessor
+    processor: PaymentProcessor | None = None
 
     currency: str
     amount: int
     account_currency: str
     account_amount: int
 
+    platform_fee_type: PlatformFeeType | None = None
+
     pledge_id: UUID4 | None = None
     issue_reward_id: UUID4 | None = None
     subscription_id: UUID4 | None = None
 
     payout_transaction_id: UUID4 | None = None
+    incurred_by_transaction_id: UUID4 | None = None
 
+
+class Transaction(TransactionEmbedded):
     pledge: TransactionPledge | None = None
     issue_reward: TransactionIssueReward | None = None
     subscription: TransactionSubscription | None = None
+
+    account_incurred_transactions: list[TransactionEmbedded]
+
+    incurred_amount: int
+    gross_amount: int
+    net_amount: int
 
 
 class TransactionDetails(Transaction):
@@ -101,3 +112,14 @@ class TransactionsBalance(Schema):
 class TransactionsSummary(Schema):
     balance: TransactionsBalance
     payout: TransactionsBalance
+
+
+class PayoutCreate(Schema):
+    account_id: UUID4
+
+
+class PayoutEstimate(Schema):
+    account_id: UUID4
+    gross_amount: int
+    fees_amount: int
+    net_amount: int

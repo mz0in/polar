@@ -101,6 +101,12 @@ export const previewOpts = {
     embed: () => <></>,
     iframe: () => <></>,
     pre: () => <></>,
+
+    p: (args: any) => <p className="first:mt-0 last:mb-0">{args.children}</p>,
+
+    img: (args: any) => (
+      <img {...args} className="w-full first:mt-0 last:mb-0" />
+    ),
   },
 } as const
 
@@ -148,12 +154,87 @@ export const AbbreviatedBrowserRender = ({
           article,
           showPaywalledContent,
           isSubscriber: true, // Do not show <SubscribeNow /> in abbreviations
+          extraAllowedCustomComponents: Object.keys(previewOpts.overrides),
         }),
       }}
     >
-      {article.body.substring(0, 500).split('\n').slice(0, 4).join('\n')}
+      {
+        abbreviatedContent({ body: article.body, includeBoundaryInBody: false })
+          .body
+      }
     </Markdown>
   )
 }
 
 export default BrowserRender
+
+export type AbbreviatedContentResult = {
+  body: string
+  manualBoundary: boolean
+  matchedBoundary?: string
+}
+
+// must be synced with Article.abbreviated_content on the backend
+export const abbreviatedContent = ({
+  body,
+  includeBoundaryInBody,
+}: {
+  body: string
+  includeBoundaryInBody: boolean
+}): AbbreviatedContentResult => {
+  const res: string[] = []
+  let l = 0
+
+  // If the post has a <hr> within 1000 characters, use that as the limit.
+
+  const boundaries = ['---\n', '<hr>\n', '<hr/>\n', '<hr />\n']
+
+  let firstAt: number | undefined = undefined
+  let firstBoundary: string | undefined = undefined
+
+  for (const b of boundaries) {
+    const idx = body.indexOf(b)
+    if (idx >= 0) {
+      if (firstAt === undefined || idx < firstAt) {
+        firstAt = idx
+        firstBoundary = b
+      }
+    }
+  }
+
+  // Support for more than three dashes in a row, "-----\n" is also a boundary
+  if (firstAt && firstBoundary === '---\n') {
+    let newFirstAt = firstAt
+    while (body.at(newFirstAt - 1) === '-') {
+      newFirstAt--
+    }
+    firstBoundary = body.substring(newFirstAt, firstAt + firstBoundary.length)
+    firstAt = newFirstAt
+  }
+
+  if (firstAt !== undefined && firstBoundary !== undefined && firstAt < 1000) {
+    let retbod = body.substring(0, firstAt).trimEnd()
+    if (includeBoundaryInBody) {
+      retbod = body.substring(0, firstAt + firstBoundary.length)
+    }
+
+    return {
+      body: retbod,
+      manualBoundary: true,
+      matchedBoundary: firstBoundary,
+    }
+  }
+
+  const parts = body.substring(0, 1000).replaceAll('\r\n', '\n').split('\n\n')
+
+  for (const p of parts) {
+    if (p.length + l > 500 && l > 0) {
+      break
+    }
+
+    l += p.length
+    res.push(p)
+  }
+
+  return { body: res.join('\n\n').trimEnd(), manualBoundary: false }
+}

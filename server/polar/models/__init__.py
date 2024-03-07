@@ -4,7 +4,7 @@ from .account import Account
 from .advertisement_campaign import AdvertisementCampaign
 from .article import Article
 from .articles_subscription import ArticlesSubscription
-from .held_transfer import HeldTransfer
+from .held_balance import HeldBalance
 from .invites import Invite
 from .issue import Issue
 from .issue_dependency import IssueDependency
@@ -23,6 +23,7 @@ from .subscription_benefit import SubscriptionBenefit
 from .subscription_benefit_grant import SubscriptionBenefitGrant
 from .subscription_tier import SubscriptionTier
 from .subscription_tier_benefit import SubscriptionTierBenefit
+from .traffic import Traffic
 from .transaction import Transaction
 from .user import OAuthAccount, User
 from .user_notification import UserNotification
@@ -35,7 +36,7 @@ __all__ = [
     "AdvertisementCampaign",
     "Article",
     "ArticlesSubscription",
-    "HeldTransfer",
+    "HeldBalance",
     "Invite",
     "Issue",
     "IssueDependency",
@@ -58,6 +59,7 @@ __all__ = [
     "SubscriptionTierBenefit",
     "TimestampedModel",
     "Transaction",
+    "Traffic",
     "User",
     "UserNotification",
     "UserOrganization",

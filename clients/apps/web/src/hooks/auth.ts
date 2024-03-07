@@ -1,23 +1,31 @@
-import { type UserRead } from '@polar-sh/sdk'
+import { AuthContext } from '@/providers/auth'
+import { PublicPageOrganizationContext } from '@/providers/organization'
+import { UserRead } from '@polar-sh/sdk'
 import * as Sentry from '@sentry/nextjs'
-import { UserState, useStore } from 'polarkit/store'
+import { api } from 'polarkit/api'
+import { CONFIG } from 'polarkit/config'
 import posthog from 'posthog-js'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useContext, useEffect, useState } from 'react'
 
-export const useAuth = (): UserState & {
-  hasChecked: boolean
-  isChecking: boolean
-  reloadUser: () => Promise<UserRead>
-  hydrated: boolean
+export const useAuth = (): {
+  authenticated: boolean
+  currentUser: UserRead | undefined
+  reloadUser: () => Promise<undefined>
 } => {
-  const authenticated = useStore((state) => state.authenticated)
-  const currentUser = useStore((state) => state.currentUser)
-  const login = useStore((state) => state.login)
-  const logout = useStore((state) => state.logout)
+  const authCtx = useContext(AuthContext)
 
-  const [hydrated, setHydrated] = useState(false)
-  const [hasChecked, setHasChecked] = useState(false)
-  const [isChecking, setIsChecking] = useState(false)
+  if (!authCtx) {
+    throw new Error('can not use useAuth outside of AuthContext')
+  }
+
+  const [currentUser, setCurrentUser] = useState(authCtx.user)
+
+  const reloadUser = async (): Promise<undefined> => {
+    try {
+      const user = await api.users.getAuthenticated()
+      setCurrentUser(user)
+    } catch {}
+  }
 
   useEffect(() => {
     if (currentUser) {
@@ -42,56 +50,27 @@ export const useAuth = (): UserState & {
     }
   }, [currentUser])
 
-  const getAuthenticatedUser = useCallback((): {
-    request: Promise<UserRead>
-    controller: AbortController
-  } => {
-    setIsChecking(true)
-    return login(() => {
-      setIsChecking(false)
-      setHasChecked(true)
-    })
-  }, [setIsChecking, setHasChecked, login])
+  return {
+    currentUser: authCtx.user,
+    authenticated: authCtx.user !== undefined,
+    reloadUser,
+  }
+}
 
-  useEffect(() => {
-    setHydrated(true)
-    if (hasChecked || authenticated) {
+export const useLogout = () => {
+  const org = useContext(PublicPageOrganizationContext)
+
+  const func = useCallback(async () => {
+    // custom domain logout
+    if (org && org.custom_domain) {
+      window.location.href = `${CONFIG.BASE_URL}/api/v1/auth/logout?organization_id=${org.id}`
       return
     }
 
-    let { controller } = getAuthenticatedUser()
-    return () => {
-      controller.abort()
-    }
-  }, [authenticated, hasChecked, getAuthenticatedUser, hydrated])
+    // polar.sh logout
+    window.location.href = `${CONFIG.BASE_URL}/api/v1/auth/logout`
+    return
+  }, [org, useLogout])
 
-  if (!hydrated) {
-    return {
-      authenticated: false,
-      currentUser: undefined,
-      hasChecked: false,
-      isChecking: false,
-      login,
-      logout,
-      reloadUser: () => {
-        const { request } = getAuthenticatedUser()
-        return request
-      },
-      hydrated,
-    }
-  }
-
-  return {
-    authenticated,
-    currentUser,
-    hasChecked,
-    isChecking,
-    login,
-    logout,
-    reloadUser: () => {
-      const { request } = getAuthenticatedUser()
-      return request
-    },
-    hydrated,
-  }
+  return func
 }

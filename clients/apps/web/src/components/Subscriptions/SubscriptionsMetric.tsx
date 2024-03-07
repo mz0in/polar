@@ -1,12 +1,12 @@
 import { AllInclusive, AttachMoney, Face } from '@mui/icons-material'
 import { SvgIconTypeMap } from '@mui/material'
 import { OverridableComponent } from '@mui/material/OverridableComponent'
+import { FormattedDateTime } from 'polarkit/components/ui/atoms'
 import {
   Card,
   CardContent,
   CardHeader,
-  FormattedDateTime,
-} from 'polarkit/components/ui/atoms'
+} from 'polarkit/components/ui/atoms/card'
 import { CardFooter } from 'polarkit/components/ui/card'
 import { getCentsInDollarString } from 'polarkit/money'
 import { useMemo } from 'react'
@@ -59,10 +59,14 @@ const SubscriptionsMetric: React.FC<SubscriptionsMetricProps> = ({
       {(dataDate || previousData) && (
         <CardFooter>
           <div className="dark:text-polar-500 text-gray-400">
-            {previousData !== undefined &&
-              getEvolutionPercentage(data, previousData)}
-            {previousData === undefined && dataDate && (
-              <FormattedDateTime datetime={dataDate} />
+            {previousData !== undefined ? (
+              getEvolutionPercentage(data, previousData)
+            ) : (
+              <>
+                {previousData === undefined && dataDate ? (
+                  <FormattedDateTime datetime={dataDate} resolution="month" />
+                ) : null}
+              </>
             )}
           </div>
         </CardFooter>

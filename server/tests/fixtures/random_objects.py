@@ -25,6 +25,7 @@ from polar.models import (
     User,
     UserOrganization,
 )
+from polar.models.article import Article
 from polar.models.issue import Issue
 from polar.models.pledge import Pledge, PledgeState, PledgeType
 from polar.models.pull_request import PullRequest
@@ -45,6 +46,11 @@ def rstr(prefix: str) -> str:
 
 @pytest_asyncio.fixture(scope="function")
 async def organization(session: AsyncSession) -> Organization:
+    return await create_organization(session)
+
+
+@pytest_asyncio.fixture(scope="function")
+async def second_organization(session: AsyncSession) -> Organization:
     return await create_organization(session)
 
 
@@ -224,6 +230,7 @@ async def create_pledge(
         fee=fee,
         state=state,
         type=type,
+        invoice_id="INVOICE_ID" if type == PledgeType.pay_on_completion else None,
     ).save(session=session)
 
     await session.commit()
@@ -709,3 +716,22 @@ async def create_subscription_benefit_grant(
     session.add(grant)
     await session.commit()
     return grant
+
+
+@pytest_asyncio.fixture(scope="function")
+async def article(
+    session: AsyncSession,
+    organization: Organization,
+    user: User,
+) -> Article:
+    article = await Article(
+        id=uuid.uuid4(),
+        organization_id=organization.id,
+        slug="test",
+        title="test",
+        body="test!",
+        created_by=user.id,
+    ).save(session=session)
+
+    await session.commit()
+    return article

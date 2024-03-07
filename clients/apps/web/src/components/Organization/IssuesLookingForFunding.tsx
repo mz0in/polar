@@ -14,13 +14,18 @@ import {
   Repository,
 } from '@polar-sh/sdk'
 import Link from 'next/link'
-import { useRouter, useSearchParams } from 'next/navigation'
+import {
+  ReadonlyURLSearchParams,
+  useRouter,
+  useSearchParams,
+} from 'next/navigation'
 import {
   IssueActivityBox,
   IssueFundingDetails,
   IssueSummary,
 } from 'polarkit/components/Issue'
-import { Button, Input } from 'polarkit/components/ui/atoms'
+import Button from 'polarkit/components/ui/atoms/button'
+import Input from 'polarkit/components/ui/atoms/input'
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -30,6 +35,7 @@ import {
   DropdownMenuTrigger,
 } from 'polarkit/components/ui/dropdown-menu'
 import { useSearchFunding } from 'polarkit/hooks'
+import { organizationPageLink } from 'polarkit/utils/nav'
 import {
   ChangeEvent,
   Dispatch,
@@ -39,7 +45,7 @@ import {
   useState,
 } from 'react'
 import { twMerge } from 'tailwind-merge'
-import Pagination, { usePagination } from '../Shared/Pagination'
+import Pagination, { usePagination } from '../Pagination/Pagination'
 import Spinner from '../Shared/Spinner'
 import {
   FundingFilters,
@@ -61,7 +67,7 @@ const IssuesLookingForFunding = ({
   pageSize = 20,
   issues,
 }: IssuesLookingForFundingProps) => {
-  const search = useSearchParams()
+  const search = useSearchParams() as ReadonlyURLSearchParams
   const initialFilter = buildFundingFilters(search)
 
   const [filters, setFilters] = useState<FundingFilters>(initialFilter)
@@ -78,7 +84,6 @@ const IssuesLookingForFunding = ({
     limit: pageSize,
   })
 
-  // const listIssues = issues.data?.items ?? []
   const listIssues =
     (clientIssues.isFetched ? clientIssues.data?.items : issues.items) ?? []
 
@@ -105,7 +110,10 @@ const IssuesLookingForFunding = ({
                   issue={i.issue}
                   right={
                     <Link
-                      href={`/${i.issue.repository.organization.name}/${i.issue.repository.name}/issues/${i.issue.number}`}
+                      href={organizationPageLink(
+                        i.issue.repository.organization,
+                        `${i.issue.repository.name}/issues/${i.issue.number}`,
+                      )}
                       className="font-medium text-blue-500"
                     >
                       <Button size="sm" variant="secondary" asChild>

@@ -1,10 +1,18 @@
 const POLAR_AUTH_COOKIE_KEY = 'polar_session'
 
+const defaultFrontendHostname = process.env.NEXT_PUBLIC_FRONTEND_BASE_URL
+  ? new URL(process.env.NEXT_PUBLIC_FRONTEND_BASE_URL).hostname
+  : 'polar.sh'
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
   transpilePackages: ['polarkit'],
+
+  // Do not do any fiddling with trailing slashes
+  trailingSlash: undefined,
+  skipTrailingSlashRedirect: true,
 
   images: {
     remotePatterns: [
@@ -135,6 +143,12 @@ const nextConfig = {
             value: 'polar.new',
           },
         ],
+        has: [
+          {
+            type: 'host',
+            value: defaultFrontendHostname,
+          },
+        ],
         permanent: false,
       },
 
@@ -147,22 +161,15 @@ const nextConfig = {
             type: 'cookie',
             key: POLAR_AUTH_COOKIE_KEY,
           },
+          {
+            type: 'host',
+            value: defaultFrontendHostname,
+          },
         ],
         missing: [
           {
             type: 'host',
             value: 'polar.new',
-          },
-        ],
-        permanent: false,
-      },
-      {
-        source: '/login(.*)',
-        destination: '/feed',
-        has: [
-          {
-            type: 'cookie',
-            key: POLAR_AUTH_COOKIE_KEY,
           },
         ],
         permanent: false,
@@ -176,6 +183,19 @@ const nextConfig = {
           {
             type: 'host',
             value: 'polar.new',
+          },
+        ],
+        permanent: false,
+      },
+
+      // Redirect /maintainer to polar.sh if on a different domain name
+      {
+        source: '/maintainer/:path*',
+        destination: `https://${defaultFrontendHostname}/maintainer/:path*`,
+        missing: [
+          {
+            type: 'host',
+            value: defaultFrontendHostname,
           },
         ],
         permanent: false,
@@ -227,6 +247,12 @@ const nextConfig = {
         source: '/issues(.*)',
         destination: '/maintainer',
         permanent: false,
+        has: [
+          {
+            type: 'host',
+            value: defaultFrontendHostname,
+          },
+        ],
       },
       {
         source: '/promote(.*)',
@@ -239,13 +265,18 @@ const nextConfig = {
         permanent: false,
       },
       {
-        source: '/maintainer/:organization/promote',
-        destination: '/maintainer/:organization/promote/issues',
+        source: '/maintainer/:organization/issues',
+        destination: '/maintainer/:organization/issues/overview',
         permanent: false,
       },
       {
         source: '/maintainer/:organization/promote/issues',
-        destination: '/maintainer/:organization/issues/promote',
+        destination: '/maintainer/:organization/issues/badge',
+        permanent: false,
+      },
+      {
+        source: '/maintainer/:organization/issues/promote',
+        destination: '/maintainer/:organization/issues/badge',
         permanent: false,
       },
       {
@@ -258,11 +289,22 @@ const nextConfig = {
         destination: '/maintainer/:organization/subscriptions/overview',
         permanent: false,
       },
+      {
+        source: '/maintainer/:organization/posts',
+        destination: '/maintainer/:organization/posts/overview',
+        permanent: false,
+      },
 
       {
         source: '/posts',
         destination: '/feed',
         permanent: false,
+        has: [
+          {
+            type: 'host',
+            value: defaultFrontendHostname,
+          },
+        ],
       },
 
       // Access tokens redirect

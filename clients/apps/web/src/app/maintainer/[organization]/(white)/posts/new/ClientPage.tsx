@@ -1,12 +1,13 @@
 'use client'
 
 import { PostEditor } from '@/components/Feed/PostEditor'
-import DashboardTopbar from '@/components/Shared/DashboardTopbar'
+import DashboardTopbar from '@/components/Navigation/DashboardTopbar'
 import { useCurrentOrgAndRepoFromURL } from '@/hooks'
 import { captureEvent } from '@/utils/posthog'
 import { ArticleCreate } from '@polar-sh/sdk'
 import { useRouter } from 'next/navigation'
-import { Button, Tabs } from 'polarkit/components/ui/atoms'
+import Button from 'polarkit/components/ui/atoms/button'
+import { Tabs } from 'polarkit/components/ui/atoms/tabs'
 import { useCreateArticle } from 'polarkit/hooks'
 import { useEffect, useState } from 'react'
 

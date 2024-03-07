@@ -1086,6 +1086,18 @@ export interface Article {
      * @memberof Article
      */
     web_view_count?: number;
+    /**
+     * 
+     * @type {string}
+     * @memberof Article
+     */
+    og_image_url?: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof Article
+     */
+    og_description?: string;
 }
 
 
@@ -1165,6 +1177,18 @@ export interface ArticleCreate {
      * @memberof ArticleCreate
      */
     is_pinned?: boolean;
+    /**
+     * Custom og:image URL value
+     * @type {string}
+     * @memberof ArticleCreate
+     */
+    og_image_url?: string;
+    /**
+     * Custom og:description value
+     * @type {string}
+     * @memberof ArticleCreate
+     */
+    og_description?: string;
 }
 
 
@@ -1326,7 +1350,7 @@ export interface ArticleUpdate {
      */
     published_at?: string;
     /**
-     * Set to true for changes to published_at to take affect.
+     * Set to true for changes to published_at to take effect.
      * @type {boolean}
      * @memberof ArticleUpdate
      */
@@ -1343,6 +1367,30 @@ export interface ArticleUpdate {
      * @memberof ArticleUpdate
      */
     is_pinned?: boolean;
+    /**
+     * Set to true for changes to og_image_url to take effect.
+     * @type {boolean}
+     * @memberof ArticleUpdate
+     */
+    set_og_image_url?: boolean;
+    /**
+     * Custom og:image URL value
+     * @type {string}
+     * @memberof ArticleUpdate
+     */
+    og_image_url?: string;
+    /**
+     * Set to true for changes to og_description to take effect.
+     * @type {boolean}
+     * @memberof ArticleUpdate
+     */
+    set_og_description?: boolean;
+    /**
+     * Custom og:description value
+     * @type {string}
+     * @memberof ArticleUpdate
+     */
+    og_description?: string;
 }
 
 
@@ -1972,6 +2020,57 @@ export interface CurrencyAmount {
      * @memberof CurrencyAmount
      */
     amount: number;
+}
+/**
+ * 
+ * @export
+ * @interface CustomDomainExchangeRequest
+ */
+export interface CustomDomainExchangeRequest {
+    /**
+     * 
+     * @type {string}
+     * @memberof CustomDomainExchangeRequest
+     */
+    token: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof CustomDomainExchangeRequest
+     */
+    secret: string;
+}
+/**
+ * 
+ * @export
+ * @interface CustomDomainExchangeResponse
+ */
+export interface CustomDomainExchangeResponse {
+    /**
+     * 
+     * @type {string}
+     * @memberof CustomDomainExchangeResponse
+     */
+    token: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof CustomDomainExchangeResponse
+     */
+    expires_at: string;
+}
+/**
+ * 
+ * @export
+ * @interface CustomDomainForwardResponse
+ */
+export interface CustomDomainForwardResponse {
+    /**
+     * 
+     * @type {string}
+     * @memberof CustomDomainForwardResponse
+     */
+    token: string;
 }
 /**
  * 
@@ -3042,6 +3141,25 @@ export interface ListResourceSubscriptionTier {
      * 
      * @type {Pagination}
      * @memberof ListResourceSubscriptionTier
+     */
+    pagination: Pagination;
+}
+/**
+ * 
+ * @export
+ * @interface ListResourceTrafficReferrer
+ */
+export interface ListResourceTrafficReferrer {
+    /**
+     * 
+     * @type {Array<TrafficReferrer>}
+     * @memberof ListResourceTrafficReferrer
+     */
+    items?: Array<TrafficReferrer>;
+    /**
+     * 
+     * @type {Pagination}
+     * @memberof ListResourceTrafficReferrer
      */
     pagination: Pagination;
 }
@@ -4213,6 +4331,12 @@ export interface Organization {
      */
     has_app_installed: boolean;
     /**
+     * 
+     * @type {string}
+     * @memberof Organization
+     */
+    custom_domain?: string;
+    /**
      * Where to send emails about payments for pledegs that this organization/team has made. Only visible for members of the organization
      * @type {string}
      * @memberof Organization
@@ -4579,6 +4703,50 @@ export type PaymentProcessor = typeof PaymentProcessor[keyof typeof PaymentProce
 /**
  * 
  * @export
+ * @interface PayoutCreate
+ */
+export interface PayoutCreate {
+    /**
+     * 
+     * @type {string}
+     * @memberof PayoutCreate
+     */
+    account_id: string;
+}
+/**
+ * 
+ * @export
+ * @interface PayoutEstimate
+ */
+export interface PayoutEstimate {
+    /**
+     * 
+     * @type {string}
+     * @memberof PayoutEstimate
+     */
+    account_id: string;
+    /**
+     * 
+     * @type {number}
+     * @memberof PayoutEstimate
+     */
+    gross_amount: number;
+    /**
+     * 
+     * @type {number}
+     * @memberof PayoutEstimate
+     */
+    fees_amount: number;
+    /**
+     * 
+     * @type {number}
+     * @memberof PayoutEstimate
+     */
+    net_amount: number;
+}
+/**
+ * 
+ * @export
  * @interface PersonalAccessToken
  */
 export interface PersonalAccessToken {
@@ -4613,6 +4781,22 @@ export interface PersonalAccessToken {
      */
     comment: string;
 }
+
+/**
+ * Type of fees applied by Polar, and billed to the users.
+ * @export
+ */
+export const PlatformFeeType = {
+    PLATFORM: 'platform',
+    PAYMENT: 'payment',
+    SUBSCRIPTION: 'subscription',
+    INVOICE: 'invoice',
+    CROSS_BORDER_TRANSFER: 'cross_border_transfer',
+    PAYOUT: 'payout',
+    ACCOUNT: 'account'
+} as const;
+export type PlatformFeeType = typeof PlatformFeeType[keyof typeof PlatformFeeType];
+
 
 /**
  * 
@@ -8179,6 +8363,113 @@ export interface TeamAdminMemberPledgedNotificationPayload {
 /**
  * 
  * @export
+ * @interface TrackPageView
+ */
+export interface TrackPageView {
+    /**
+     * 
+     * @type {string}
+     * @memberof TrackPageView
+     */
+    location_href: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof TrackPageView
+     */
+    article_id?: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof TrackPageView
+     */
+    organization_id?: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof TrackPageView
+     */
+    referrer?: string;
+}
+/**
+ * 
+ * @export
+ * @interface TrackPageViewResponse
+ */
+export interface TrackPageViewResponse {
+    /**
+     * 
+     * @type {boolean}
+     * @memberof TrackPageViewResponse
+     */
+    ok: boolean;
+}
+/**
+ * 
+ * @export
+ * @interface TrafficReferrer
+ */
+export interface TrafficReferrer {
+    /**
+     * 
+     * @type {string}
+     * @memberof TrafficReferrer
+     */
+    referrer: string;
+    /**
+     * 
+     * @type {number}
+     * @memberof TrafficReferrer
+     */
+    views: number;
+}
+/**
+ * 
+ * @export
+ * @interface TrafficStatistics
+ */
+export interface TrafficStatistics {
+    /**
+     * 
+     * @type {Array<TrafficStatisticsPeriod>}
+     * @memberof TrafficStatistics
+     */
+    periods: Array<TrafficStatisticsPeriod>;
+}
+/**
+ * 
+ * @export
+ * @interface TrafficStatisticsPeriod
+ */
+export interface TrafficStatisticsPeriod {
+    /**
+     * 
+     * @type {string}
+     * @memberof TrafficStatisticsPeriod
+     */
+    start_date: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof TrafficStatisticsPeriod
+     */
+    end_date: string;
+    /**
+     * 
+     * @type {number}
+     * @memberof TrafficStatisticsPeriod
+     */
+    views: number;
+    /**
+     * 
+     * @type {string}
+     * @memberof TrafficStatisticsPeriod
+     */
+    article_id?: string;
+}
+/**
+ * 
+ * @export
  * @interface Transaction
  */
 export interface Transaction {
@@ -8211,7 +8502,7 @@ export interface Transaction {
      * @type {PaymentProcessor}
      * @memberof Transaction
      */
-    processor: PaymentProcessor;
+    processor?: PaymentProcessor;
     /**
      * 
      * @type {string}
@@ -8238,6 +8529,12 @@ export interface Transaction {
     account_amount: number;
     /**
      * 
+     * @type {PlatformFeeType}
+     * @memberof Transaction
+     */
+    platform_fee_type?: PlatformFeeType;
+    /**
+     * 
      * @type {string}
      * @memberof Transaction
      */
@@ -8262,6 +8559,12 @@ export interface Transaction {
     payout_transaction_id?: string;
     /**
      * 
+     * @type {string}
+     * @memberof Transaction
+     */
+    incurred_by_transaction_id?: string;
+    /**
+     * 
      * @type {TransactionPledge}
      * @memberof Transaction
      */
@@ -8278,6 +8581,30 @@ export interface Transaction {
      * @memberof Transaction
      */
     subscription?: TransactionSubscription;
+    /**
+     * 
+     * @type {Array<TransactionEmbedded>}
+     * @memberof Transaction
+     */
+    account_incurred_transactions: Array<TransactionEmbedded>;
+    /**
+     * 
+     * @type {number}
+     * @memberof Transaction
+     */
+    incurred_amount: number;
+    /**
+     * 
+     * @type {number}
+     * @memberof Transaction
+     */
+    gross_amount: number;
+    /**
+     * 
+     * @type {number}
+     * @memberof Transaction
+     */
+    net_amount: number;
 }
 /**
  * 
@@ -8314,7 +8641,7 @@ export interface TransactionDetails {
      * @type {PaymentProcessor}
      * @memberof TransactionDetails
      */
-    processor: PaymentProcessor;
+    processor?: PaymentProcessor;
     /**
      * 
      * @type {string}
@@ -8341,6 +8668,12 @@ export interface TransactionDetails {
     account_amount: number;
     /**
      * 
+     * @type {PlatformFeeType}
+     * @memberof TransactionDetails
+     */
+    platform_fee_type?: PlatformFeeType;
+    /**
+     * 
      * @type {string}
      * @memberof TransactionDetails
      */
@@ -8365,6 +8698,12 @@ export interface TransactionDetails {
     payout_transaction_id?: string;
     /**
      * 
+     * @type {string}
+     * @memberof TransactionDetails
+     */
+    incurred_by_transaction_id?: string;
+    /**
+     * 
      * @type {TransactionPledge}
      * @memberof TransactionDetails
      */
@@ -8383,10 +8722,131 @@ export interface TransactionDetails {
     subscription?: TransactionSubscription;
     /**
      * 
+     * @type {Array<TransactionEmbedded>}
+     * @memberof TransactionDetails
+     */
+    account_incurred_transactions: Array<TransactionEmbedded>;
+    /**
+     * 
+     * @type {number}
+     * @memberof TransactionDetails
+     */
+    incurred_amount: number;
+    /**
+     * 
+     * @type {number}
+     * @memberof TransactionDetails
+     */
+    gross_amount: number;
+    /**
+     * 
+     * @type {number}
+     * @memberof TransactionDetails
+     */
+    net_amount: number;
+    /**
+     * 
      * @type {Array<Transaction>}
      * @memberof TransactionDetails
      */
     paid_transactions: Array<Transaction>;
+}
+/**
+ * 
+ * @export
+ * @interface TransactionEmbedded
+ */
+export interface TransactionEmbedded {
+    /**
+     * 
+     * @type {string}
+     * @memberof TransactionEmbedded
+     */
+    created_at: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof TransactionEmbedded
+     */
+    modified_at?: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof TransactionEmbedded
+     */
+    id: string;
+    /**
+     * 
+     * @type {TransactionType}
+     * @memberof TransactionEmbedded
+     */
+    type: TransactionType;
+    /**
+     * 
+     * @type {PaymentProcessor}
+     * @memberof TransactionEmbedded
+     */
+    processor?: PaymentProcessor;
+    /**
+     * 
+     * @type {string}
+     * @memberof TransactionEmbedded
+     */
+    currency: string;
+    /**
+     * 
+     * @type {number}
+     * @memberof TransactionEmbedded
+     */
+    amount: number;
+    /**
+     * 
+     * @type {string}
+     * @memberof TransactionEmbedded
+     */
+    account_currency: string;
+    /**
+     * 
+     * @type {number}
+     * @memberof TransactionEmbedded
+     */
+    account_amount: number;
+    /**
+     * 
+     * @type {PlatformFeeType}
+     * @memberof TransactionEmbedded
+     */
+    platform_fee_type?: PlatformFeeType;
+    /**
+     * 
+     * @type {string}
+     * @memberof TransactionEmbedded
+     */
+    pledge_id?: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof TransactionEmbedded
+     */
+    issue_reward_id?: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof TransactionEmbedded
+     */
+    subscription_id?: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof TransactionEmbedded
+     */
+    payout_transaction_id?: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof TransactionEmbedded
+     */
+    incurred_by_transaction_id?: string;
 }
 /**
  * 
@@ -8738,9 +9198,10 @@ export interface TransactionSubscriptionTier {
  */
 export const TransactionType = {
     PAYMENT: 'payment',
+    PROCESSOR_FEE: 'processor_fee',
     REFUND: 'refund',
     DISPUTE: 'dispute',
-    TRANSFER: 'transfer',
+    BALANCE: 'balance',
     PAYOUT: 'payout'
 } as const;
 export type TransactionType = typeof TransactionType[keyof typeof TransactionType];

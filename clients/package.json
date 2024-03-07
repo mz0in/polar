@@ -2,7 +2,7 @@
   "private": true,
   "name": "polar",
   "scripts": {
-    "build": "turbo run build",
+    "build": "turbo run build --filter=!astro-example",
     "dev": "turbo run dev",
     "dev-web": "turbo run dev --filter=web",
     "lint": "turbo run lint",
@@ -11,9 +11,12 @@
     "generate": "cd packages/sdk && pnpm generate",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "preinstall": "npx only-allow pnpm",
-    "postinstall": "manypkg check"
+    "postinstall": "manypkg check",
+    "publish-packages": "pnpm build && pnpm test && changeset version && changeset publish",
+    "version-packages": "changeset version && pnpm install --fix-lockfile"
   },
   "dependencies": {
+    "@changesets/cli": "^2.27.1",
     "@manypkg/cli": "latest",
     "eslint": "^8.55.0",
     "eslint-config-custom": "workspace:*",
@@ -21,7 +24,7 @@
     "prettier": "^3.1.1",
     "prettier-plugin-organize-imports": "^3.2.3",
     "prettier-plugin-tailwindcss": "^0.5.9",
-    "turbo": "^1.10.15"
+    "turbo": "^1.12.4"
   },
   "packageManager": "pnpm@7.15.0",
   "manypkg": {

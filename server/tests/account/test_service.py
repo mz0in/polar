@@ -12,14 +12,13 @@ async def create_transaction(
     session: AsyncSession, *, account: Account | None = None, amount: int = 1000
 ) -> Transaction:
     transaction = Transaction(
-        type=TransactionType.transfer,
+        type=TransactionType.balance,
         processor=PaymentProcessor.stripe,
         currency="usd",
         amount=amount,
         account_currency="eur",
         account_amount=int(amount * 0.9),
         tax_amount=0,
-        processor_fee_amount=0,
         account=account,
     )
     session.add(transaction)
@@ -43,9 +42,7 @@ class TestCheckReviewThreshold:
         enqueue_job_mock = mocker.patch("polar.account.service.enqueue_job")
 
         account = await create_account(session, admin=user, status=status)
-        updated_account = await account_service.check_review_threshold(
-            session, account, 0
-        )
+        updated_account = await account_service.check_review_threshold(session, account)
         assert updated_account.status == status
 
         enqueue_job_mock.assert_not_called()
@@ -60,9 +57,7 @@ class TestCheckReviewThreshold:
         )
         await create_transaction(session, account=account)
 
-        updated_account = await account_service.check_review_threshold(
-            session, account, 0
-        )
+        updated_account = await account_service.check_review_threshold(session, account)
         assert updated_account.status == Account.Status.UNREVIEWED
 
         enqueue_job_mock.assert_not_called()
@@ -78,9 +73,7 @@ class TestCheckReviewThreshold:
         for _ in range(0, 10):
             await create_transaction(session, account=account)
 
-        updated_account = await account_service.check_review_threshold(
-            session, account, 0
-        )
+        updated_account = await account_service.check_review_threshold(session, account)
         assert updated_account.status == Account.Status.UNDER_REVIEW
 
         enqueue_job_mock.assert_called_once_with(

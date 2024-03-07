@@ -4,13 +4,13 @@ import AccountAssociations from '@/components/Accounts/AccountAssociations'
 import { Account, Organization, Status } from '@polar-sh/sdk'
 import { api } from 'polarkit'
 import { ACCOUNT_TYPE_DISPLAY_NAMES } from 'polarkit/account'
+import Button from 'polarkit/components/ui/atoms/button'
 import {
-  Button,
   Select,
   SelectTrigger,
   SelectValue,
-  ShadowBoxOnMd,
-} from 'polarkit/components/ui/atoms'
+} from 'polarkit/components/ui/atoms/select'
+import { ShadowBoxOnMd } from 'polarkit/components/ui/atoms/shadowbox'
 import { Form, FormField } from 'polarkit/components/ui/form'
 import { SelectContent, SelectItem } from 'polarkit/components/ui/select'
 import { Separator } from 'polarkit/components/ui/separator'
@@ -215,8 +215,7 @@ export const AccountSetup: React.FC<AccoutSetupProps> = ({
               conducting a review.
             </p>
             <p>
-              Transfers are temporarily paused during this brief evaluation
-              period.
+              Payouts are note possible during this brief evaluation period.
             </p>
           </>
         )}

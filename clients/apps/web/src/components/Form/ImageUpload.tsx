@@ -111,7 +111,7 @@ const ImageUpload = ({
                 ref={imageRef}
                 src={imagePreviewSrc}
                 className={twMerge(
-                  'flex cursor-pointer items-center justify-center rounded-xl border border-gray-100 bg-gray-50 hover:opacity-80',
+                  'flex cursor-pointer items-center justify-center rounded-xl border border-gray-100 bg-gray-50 object-cover hover:opacity-80',
                   isLoading ? 'opacity-50' : '',
                   errorMessage ? 'border-red-500' : '',
                   !height && !width ? 'h-32 w-32' : '',
@@ -141,7 +141,7 @@ const ImageUpload = ({
               style={{
                 maxWidth: width,
                 maxHeight: height,
-                width: '100%',
+                width: width && height ? '100%' : undefined,
                 aspectRatio: `${width} / ${height}`,
               }}
             >

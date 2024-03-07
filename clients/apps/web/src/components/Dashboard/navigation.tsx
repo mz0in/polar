@@ -5,8 +5,8 @@ import {
   AllInclusiveOutlined,
   AttachMoneyOutlined,
   Bolt,
+  BoltOutlined,
   CropFreeOutlined,
-  DiamondOutlined,
   Face,
   FavoriteBorderOutlined,
   HowToVoteOutlined,
@@ -15,6 +15,7 @@ import {
   ViewDayOutlined,
   WifiTetheringOutlined,
 } from '@mui/icons-material'
+import { organizationPageLink } from 'polarkit/utils/nav'
 
 export type SubRoute = {
   readonly title: string
@@ -50,7 +51,16 @@ export const maintainerRoutes = (org: Organization): Route[] => [
     postIcon: undefined,
     link: `/maintainer/${org.name}/posts`,
     if: true,
-    subs: undefined,
+    subs: [
+      {
+        title: 'Overview',
+        link: `/maintainer/${org.name}/posts/overview`,
+      },
+      {
+        title: 'Analytics',
+        link: `/maintainer/${org.name}/posts/analytics`,
+      },
+    ],
   },
   {
     id: 'org-subscriptions',
@@ -88,17 +98,12 @@ export const maintainerRoutes = (org: Organization): Route[] => [
     subs: [
       {
         title: 'Overview',
-        link: `/maintainer/${org.name}/issues`,
+        link: `/maintainer/${org.name}/issues/overview`,
         icon: <HowToVoteOutlined fontSize="inherit" />,
       },
       {
-        title: 'Promote',
-        link: `/maintainer/${org.name}/issues/promote`,
-        icon: <WifiTetheringOutlined fontSize="inherit" />,
-      },
-      {
-        title: 'Embeds',
-        link: `/maintainer/${org.name}/issues/embeds`,
+        title: 'Badge',
+        link: `/maintainer/${org.name}/issues/badge`,
         icon: <CropFreeOutlined fontSize="inherit" />,
       },
     ],
@@ -122,9 +127,18 @@ export const maintainerRoutes = (org: Organization): Route[] => [
     subs: undefined,
   },
   {
+    id: 'promote',
+    title: 'Promote',
+    icon: <WifiTetheringOutlined fontSize="inherit" />,
+    postIcon: undefined,
+    link: `/maintainer/${org.name}/promote`,
+    if: true,
+    subs: undefined,
+  },
+  {
     id: 'public-page',
     title: 'Public Page',
-    link: `/${org.name}`,
+    link: organizationPageLink(org),
     postIcon: undefined,
     icon: <ArrowUpRightIcon className="h-5 w-5" fontSize="inherit" />,
     if: true,
@@ -146,7 +160,7 @@ export const backerRoutes = (): Route[] => [
     id: 'subscriptions',
     title: 'My Subscriptions',
     link: `/subscriptions`,
-    icon: <DiamondOutlined className="h-5 w-5" fontSize="inherit" />,
+    icon: <BoltOutlined className="h-5 w-5" fontSize="inherit" />,
     postIcon: undefined,
     if: true,
     subs: undefined,

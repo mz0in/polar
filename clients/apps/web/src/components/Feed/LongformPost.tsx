@@ -3,7 +3,9 @@
 import { StaggerReveal } from '@/components/Shared/StaggerReveal'
 import Link from 'next/link'
 import { LogoIcon } from 'polarkit/components/brand'
-import { Avatar, Button } from 'polarkit/components/ui/atoms'
+import Avatar from 'polarkit/components/ui/atoms/avatar'
+import Button from 'polarkit/components/ui/atoms/button'
+import { organizationPageLink } from 'polarkit/utils/nav'
 import { useMemo } from 'react'
 import { twMerge } from 'tailwind-merge'
 import SubscribeNowWithModal from '../Subscriptions/SubscribeNowWithModal'
@@ -155,11 +157,11 @@ export default function LongformPost({
           className={twMerge(
             'prose dark:prose-invert',
             'dark:prose-pre:bg-polar-800 prose-pre:bg-gray-100 prose-pre:rounded-2xl',
-            'dark:prose-headings:text-white prose-p:text-gray-700 dark:prose-p:text-polar-200',
+            'dark:prose-headings:text-polar-50 prose-headings:font-medium prose-p:text-gray-800 dark:prose-p:text-polar-200 dark:prose-strong:text-polar-50 dark:prose-strong:font-medium',
             'prose-img:rounded-2xl prose-img:drop-shadow-none lg:prose-img:drop-shadow-2xl',
             ' prose-a:text-blue-500 hover:prose-a:text-blue-400 dark:hover:prose-a:text-blue-300 dark:prose-a:text-blue-400 prose-a:no-underline',
             'prose-code:before:content-none prose-code:after:content-none prose-code:bg-gray-100 dark:prose-code:bg-polar-700 prose-code:font-normal prose-code:rounded-sm prose-code:px-1.5 prose-code:py-1',
-            'mb-8 w-full max-w-none space-y-16',
+            'mb-8 w-full max-w-none space-y-16 leading-loose tracking-[0.015rem]',
           )}
         >
           <BrowserRender
@@ -248,7 +250,7 @@ const UpsellFreeSubscriberToPaid = ({
               article.organization.pretty_name || article.organization.name
             } by subscribing to their work and get access to exclusive content.`}
       </p>
-      <Link href={`/${article.organization.name}/subscriptions`}>
+      <Link href={organizationPageLink(article.organization, 'subscriptions')}>
         <Button className="mt-4">Upgrade</Button>
       </Link>
     </div>

@@ -8,12 +8,10 @@ import { useCurrentOrgAndRepoFromURL } from '@/hooks/org'
 import { ArrowTopRightOnSquareIcon } from '@heroicons/react/24/outline'
 import { CreditBalance, Organization } from '@polar-sh/sdk'
 import { api } from 'polarkit/api'
-import {
-  Button,
-  Input,
-  MoneyInput,
-  ShadowBox,
-} from 'polarkit/components/ui/atoms'
+import Button from 'polarkit/components/ui/atoms/button'
+import Input from 'polarkit/components/ui/atoms/input'
+import MoneyInput from 'polarkit/components/ui/atoms/moneyinput'
+import ShadowBox from 'polarkit/components/ui/atoms/shadowbox'
 import {
   Form,
   FormControl,

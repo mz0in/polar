@@ -3,7 +3,8 @@
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { api } from 'polarkit/api'
-import { Button, ShadowBox } from 'polarkit/components/ui/atoms'
+import Button from 'polarkit/components/ui/atoms/button'
+import ShadowBox from 'polarkit/components/ui/atoms/shadowbox'
 import { Banner } from 'polarkit/components/ui/molecules'
 import { useState } from 'react'
 
@@ -12,8 +13,8 @@ export default function Page() {
 
   const search = useSearchParams()
 
-  const id = search.get('id')
-  const org = search.get('org')
+  const id = search?.get('id')
+  const org = search?.get('org')
 
   const [loading, setLoading] = useState(false)
   const [showMessage, setShowMessage] = useState(false)

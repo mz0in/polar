@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from typing import Any
+from typing import Any, Literal
 
 import jwt
 
@@ -16,13 +16,26 @@ def create_expiration_dt(seconds: int) -> datetime:
     return utc_now() + timedelta(seconds=seconds)
 
 
+TYPE = Literal[
+    "custom_domain_forward",
+    "github_oauth",
+    "discord_oauth",
+    "discord_guild_token",
+    "auth",
+]
+
+
 def encode(
     *,
     data: dict[str, Any],
     secret: str,
     expires_at: datetime | None = None,
     expires_in: int | None = DEFAULT_EXPIRATION,
+    type: TYPE,
 ) -> str:
+    if type:
+        data["type"] = type
+
     to_encode = data.copy()
     if not expires_at:
         expires_in = expires_in or DEFAULT_EXPIRATION
@@ -32,5 +45,21 @@ def encode(
     return jwt.encode(to_encode, secret, algorithm=ALGORITHM)
 
 
-def decode(*, token: str, secret: str) -> dict[str, Any]:
+def decode_unsafe(*, token: str, secret: str) -> dict[str, Any]:
     return jwt.decode(token, secret, algorithms=[ALGORITHM])
+
+
+def decode(
+    *,
+    token: str,
+    secret: str,
+    type: TYPE,
+) -> dict[str, Any]:
+    res = decode_unsafe(token=token, secret=secret)
+
+    if res.get("type", "") != type:
+        raise Exception(
+            "JWT of unexpected type, expected '%s' got '%s'", type, res.get("type", "")
+        )
+
+    return res

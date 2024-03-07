@@ -8,13 +8,13 @@ import {
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { api } from 'polarkit'
+import Avatar from 'polarkit/components/ui/atoms/avatar'
+import Button, { ButtonProps } from 'polarkit/components/ui/atoms/button'
 import {
-  Avatar,
-  Button,
   Select,
   SelectContent,
   SelectItem,
-} from 'polarkit/components/ui/atoms'
+} from 'polarkit/components/ui/atoms/select'
 import {
   useListAllOrganizations,
   useOrganizationSubscriptions,
@@ -23,7 +23,7 @@ import {
 import { getCentsInDollarString } from 'polarkit/money'
 import { useCallback, useMemo, useState } from 'react'
 import { SelectTriggerBase } from '../../../../../packages/polarkit/src/components/ui/atoms/Select'
-import { ConfirmModal } from '../Shared/ConfirmModal'
+import { ConfirmModal } from '../Modal/ConfirmModal'
 
 const buttonClasses =
   'grow transition-colors dark:hover:border-[--var-dark-border-color] dark:hover:bg-[--var-dark-border-color] dark:hover:text-[--var-dark-fg-color]'
@@ -31,17 +31,22 @@ const buttonClasses =
 interface AnonymousSubscriptionTierSubscribeButtonProps {
   subscriptionTier: SubscriptionTier
   subscribePath: string
+  variant?: ButtonProps['variant']
 }
 
 const AnonymousSubscriptionTierSubscribeButton: React.FC<
   AnonymousSubscriptionTierSubscribeButtonProps
-> = ({ subscriptionTier, subscribePath }) => {
+> = ({ subscriptionTier, subscribePath, variant = 'outline' }) => {
   return (
     <Link
       className="w-full"
       href={`${subscribePath}?tier=${subscriptionTier.id}`}
     >
-      <Button className={buttonClasses} fullWidth variant="outline">
+      <Button
+        className={variant === 'outline' ? buttonClasses : ''}
+        fullWidth
+        variant={variant}
+      >
         Subscribe
       </Button>
     </Link>
@@ -53,14 +58,23 @@ interface AuthenticatedSubscriptionTierSubscribeButtonProps {
   subscriptionTier: SubscriptionTier
   organization: Organization
   subscribePath: string
+  variant?: ButtonProps['variant']
 }
 
 const AuthenticatedSubscriptionTierSubscribeButton: React.FC<
   AuthenticatedSubscriptionTierSubscribeButtonProps
-> = ({ user, subscriptionTier, organization, subscribePath }) => {
+> = ({
+  user,
+  subscriptionTier,
+  organization,
+  subscribePath,
+  variant = 'outline',
+}) => {
   const router = useRouter()
 
-  const { data: organizationsList } = useListAllOrganizations(true)
+  const { data: organizationsList, isFetched: organizationsListFetched } =
+    useListAllOrganizations(true)
+
   const organizations = useMemo(
     () =>
       organizationsList &&
@@ -70,41 +84,48 @@ const AuthenticatedSubscriptionTierSubscribeButton: React.FC<
       ),
     [organizationsList],
   )
+
   const [selectedSubscriber, setSelectedSubscriber] = useState<
     UserRead | Organization
   >(user)
-  const isUserSelected = useMemo(
-    () => selectedSubscriber.id === user.id,
-    [selectedSubscriber, user],
-  )
 
-  const onSubscriberSelect = useCallback(
-    (id: string) => {
-      if (id === user.id) {
-        setSelectedSubscriber(user)
-      } else if (organizations) {
-        const organizationIndex = organizations.findIndex(
-          (organization) => organization.id === id,
-        )
-        if (organizationIndex > -1) {
-          setSelectedSubscriber(organizations[organizationIndex])
-        }
+  const isUserSelected = selectedSubscriber.id === user.id
+
+  const onSubscriberSelect = (id: string) => {
+    if (id === user.id) {
+      setSelectedSubscriber(user)
+    } else if (organizations) {
+      const organizationIndex = organizations.findIndex(
+        (organization) => organization.id === id,
+      )
+      if (organizationIndex > -1) {
+        setSelectedSubscriber(organizations[organizationIndex])
       }
-    },
-    [user, organizations],
+    }
+  }
+
+  const {
+    data: userSubscriptionsList,
+    refetch: refetchUserSubscriptions,
+    isFetched: userSubscriptionsListFetched,
+  } = useUserSubscriptions(
+    user.id,
+    organization.name,
+    10,
+    organization.platform,
   )
 
-  const { data: userSubscriptionsList, refetch: refetchUserSubscriptions } =
-    useUserSubscriptions(user.id, organization.name, 10, organization.platform)
   const {
     data: organizationSubscriptionsList,
     refetch: refetchOrganizationSubscriptions,
+    isFetched: organizationSubscriptionsListFetched,
   } = useOrganizationSubscriptions(
     !isUserSelected ? selectedSubscriber.id : undefined,
     organization.name,
     10,
     organization.platform,
   )
+
   const subscriptions = isUserSelected
     ? userSubscriptionsList?.items
     : organizationSubscriptionsList?.items
@@ -118,6 +139,7 @@ const AuthenticatedSubscriptionTierSubscribeButton: React.FC<
       ),
     [subscriptions, subscriptionTier],
   )
+
   const upgradableSubscription = useMemo(
     () =>
       subscriptions?.find(
@@ -126,6 +148,7 @@ const AuthenticatedSubscriptionTierSubscribeButton: React.FC<
       ),
     [subscriptions, subscriptionTier],
   )
+
   const isDowngrade = useMemo(
     () =>
       upgradableSubscription &&
@@ -134,6 +157,11 @@ const AuthenticatedSubscriptionTierSubscribeButton: React.FC<
   )
 
   const [showConfirmModal, setShowConfirmModal] = useState(false)
+
+  const fetched =
+    organizationsListFetched &&
+    (!isUserSelected || userSubscriptionsListFetched) &&
+    (isUserSelected || organizationSubscriptionsListFetched)
 
   const onUpgradeConfirm = useCallback(async () => {
     if (!upgradableSubscription) {
@@ -209,61 +237,78 @@ const AuthenticatedSubscriptionTierSubscribeButton: React.FC<
         </Select>
       )}
       <div className="grow">
-        {isSubscribed && (
-          <Button
-            className={buttonClasses}
-            fullWidth
-            disabled
-            variant="outline"
-          >
-            Subscribed
-          </Button>
-        )}
-        {upgradableSubscription && (
+        {fetched ? (
           <>
-            <Button
-              className={buttonClasses}
-              fullWidth
-              variant="outline"
-              onClick={() => onUpgrade()}
-            >
-              {isDowngrade ? 'Downgrade' : 'Upgrade'}
-            </Button>
-            <ConfirmModal
-              isShown={showConfirmModal}
-              hide={() => setShowConfirmModal(false)}
-              title={
-                isDowngrade
-                  ? `Downgrade to ${subscriptionTier.name}`
-                  : `Upgrade to ${subscriptionTier.name}`
-              }
-              description={
-                isDowngrade
-                  ? `On your next invoice, you'll be billed $${getCentsInDollarString(
-                      subscriptionTier.price_amount,
-                      false,
-                      true,
-                    )}, minus a credit of what we already billed for the current month.`
-                  : `On your next invoice, you'll be billed $${getCentsInDollarString(
-                      subscriptionTier.price_amount,
-                      false,
-                      true,
-                    )}, plus a proration for the current month.`
-              }
-              onConfirm={() => onUpgradeConfirm()}
-            />
+            {isSubscribed && (
+              <Button
+                className={variant === 'outline' ? buttonClasses : ''}
+                fullWidth
+                disabled
+                variant={variant}
+              >
+                Subscribed
+              </Button>
+            )}
+            {upgradableSubscription && (
+              <>
+                <Button
+                  className={variant === 'outline' ? buttonClasses : ''}
+                  fullWidth
+                  variant={variant}
+                  onClick={() => onUpgrade()}
+                >
+                  {isDowngrade ? 'Downgrade' : 'Upgrade'}
+                </Button>
+                <ConfirmModal
+                  isShown={showConfirmModal}
+                  hide={() => setShowConfirmModal(false)}
+                  title={
+                    isDowngrade
+                      ? `Downgrade to ${subscriptionTier.name}`
+                      : `Upgrade to ${subscriptionTier.name}`
+                  }
+                  description={
+                    isDowngrade
+                      ? `On your next invoice, you'll be billed $${getCentsInDollarString(
+                          subscriptionTier.price_amount,
+                          false,
+                          true,
+                        )}, minus a credit of what we already billed for the current month.`
+                      : `On your next invoice, you'll be billed $${getCentsInDollarString(
+                          subscriptionTier.price_amount,
+                          false,
+                          true,
+                        )}, plus a proration for the current month.`
+                  }
+                  onConfirm={() => onUpgradeConfirm()}
+                />
+              </>
+            )}
+            {!upgradableSubscription && !isSubscribed && (
+              <Link
+                href={`${subscribePath}?tier=${subscriptionTier.id}${
+                  !isUserSelected
+                    ? `&organization_id=${selectedSubscriber.id}`
+                    : ''
+                }`}
+              >
+                <Button
+                  className={variant === 'outline' ? buttonClasses : ''}
+                  fullWidth
+                  variant={variant}
+                >
+                  Subscribe
+                </Button>
+              </Link>
+            )}
           </>
-        )}
-        {!upgradableSubscription && !isSubscribed && (
-          <Link
-            href={`${subscribePath}?tier=${subscriptionTier.id}${
-              !isUserSelected ? `&organization_id=${selectedSubscriber.id}` : ''
-            }`}
-          >
-            <Button className={buttonClasses} fullWidth variant="outline">
-              Subscribe
-            </Button>
-          </Link>
+        ) : (
+          <Button
+            fullWidth
+            disabled={true}
+            loading={true}
+            value={'outline'}
+          ></Button>
         )}
       </div>
     </div>
@@ -274,27 +319,29 @@ interface SubscriptionTierSubscribeButtonProps {
   subscriptionTier: SubscriptionTier
   organization: Organization
   subscribePath: string
+  variant?: ButtonProps['variant']
 }
 
 const SubscriptionTierSubscribeButton: React.FC<
   SubscriptionTierSubscribeButtonProps
-> = ({ subscriptionTier, organization, subscribePath }) => {
+> = ({ subscriptionTier, organization, subscribePath, variant }) => {
   const { currentUser } = useAuth()
 
   return (
     <>
-      {!currentUser && (
-        <AnonymousSubscriptionTierSubscribeButton
-          subscriptionTier={subscriptionTier}
-          subscribePath={subscribePath}
-        />
-      )}
-      {currentUser && (
+      {currentUser ? (
         <AuthenticatedSubscriptionTierSubscribeButton
           user={currentUser}
           subscriptionTier={subscriptionTier}
           organization={organization}
           subscribePath={subscribePath}
+          variant={variant}
+        />
+      ) : (
+        <AnonymousSubscriptionTierSubscribeButton
+          subscriptionTier={subscriptionTier}
+          subscribePath={subscribePath}
+          variant={variant}
         />
       )}
     </>

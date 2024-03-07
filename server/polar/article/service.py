@@ -95,6 +95,10 @@ class ArticleService:
             paid_subscribers_only=create_schema.paid_subscribers_only,
             published_at=published_at,
             is_pinned=True if create_schema.is_pinned is True else False,
+            og_image_url=str(create_schema.og_image_url)
+            if create_schema.og_image_url
+            else None,
+            og_description=create_schema.og_description,
         ).save(session, autocommit=autocommit)
 
     async def get_loaded(
@@ -147,6 +151,19 @@ class ArticleService:
         results, count = await paginate(session, statement, pagination=pagination)
 
         return results, count
+
+    async def list_by_organization_id(
+        self,
+        session: AsyncSession,
+        organization_id: UUID,
+    ) -> Sequence[Article]:
+        statement = (
+            sql.select(Article)
+            .where(Article.organization_id == organization_id)
+            .where(Article.deleted_at.is_(None))
+        )
+        res = await session.execute(statement)
+        return res.scalars().unique().all()
 
     async def search(
         self,
@@ -249,7 +266,7 @@ class ArticleService:
                 and article.published_at is None
             ):
                 article.published_at = utc_now()
-                shouldNotifyOnDiscord = True
+                should_notify_on_discord = True
 
             article.visibility = self._visibility_to_model_visibility(update.visibility)
 
@@ -265,6 +282,14 @@ class ArticleService:
 
         if update.notify_subscribers is not None:
             article.notify_subscribers = update.notify_subscribers
+
+        if update.set_og_image_url:
+            article.og_image_url = (
+                str(update.og_image_url) if update.og_image_url else None
+            )
+
+        if update.set_og_description:
+            article.og_description = update.og_description
 
         await article.save(session)
 

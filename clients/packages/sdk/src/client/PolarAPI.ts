@@ -2,6 +2,7 @@ import {
   AccountsApi,
   AdvertisementsApi,
   ArticlesApi,
+  AuthApi,
   BackofficeApi,
   Configuration,
   DashboardApi,
@@ -21,6 +22,7 @@ import {
   RewardsApi,
   StreamApi,
   SubscriptionsApi,
+  TrafficApi,
   TransactionsApi,
   UsersApi,
   WebhookNotificationsApi,
@@ -30,6 +32,7 @@ export class PolarAPI {
   public readonly accounts: AccountsApi
   public readonly advertisements: AdvertisementsApi
   public readonly articles: ArticlesApi
+  public readonly auth: AuthApi
   public readonly backoffice: BackofficeApi
   public readonly dashboard: DashboardApi
   public readonly extension: ExtensionApi
@@ -48,14 +51,16 @@ export class PolarAPI {
   public readonly rewards: RewardsApi
   public readonly stream: StreamApi
   public readonly subscriptions: SubscriptionsApi
+  public readonly traffic: TrafficApi
   public readonly transactions: TransactionsApi
   public readonly users: UsersApi
-  public readonly webhookNotifications: WebhookNotificationsApi;
+  public readonly webhookNotifications: WebhookNotificationsApi
 
   constructor(config: Configuration) {
     this.accounts = new AccountsApi(config)
     this.advertisements = new AdvertisementsApi(config)
     this.articles = new ArticlesApi(config)
+    this.auth = new AuthApi(config)
     this.backoffice = new BackofficeApi(config)
     this.dashboard = new DashboardApi(config)
     this.extension = new ExtensionApi(config)
@@ -74,8 +79,9 @@ export class PolarAPI {
     this.rewards = new RewardsApi(config)
     this.stream = new StreamApi(config)
     this.subscriptions = new SubscriptionsApi(config)
+    this.traffic = new TrafficApi(config)
     this.transactions = new TransactionsApi(config)
     this.users = new UsersApi(config)
-    this.webhookNotifications = new WebhookNotificationsApi(config);
+    this.webhookNotifications = new WebhookNotificationsApi(config)
   }
 }

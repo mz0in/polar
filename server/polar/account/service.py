@@ -12,6 +12,7 @@ from sqlalchemy.orm import joinedload
 from polar.config import settings
 from polar.enums import AccountType
 from polar.exceptions import PolarError
+from polar.integrations.loops.service import loops as loops_service
 from polar.integrations.open_collective.service import (
     CollectiveNotFoundError,
     OpenCollectiveAPIError,
@@ -101,35 +102,34 @@ class AccountService(ResourceService[Account, AccountCreate, AccountUpdate]):
         self,
         session: AsyncSession,
         *,
-        admin_id: UUID,
+        admin: User,
         account_create: AccountCreate,
     ) -> Account:
         if account_create.account_type == AccountType.stripe:
             account = await self._create_stripe_account(
-                session, admin_id, account_create
+                session, admin.id, account_create
             )
         elif account_create.account_type == AccountType.open_collective:
             account = await self._create_open_collective_account(
-                session, admin_id, account_create
+                session, admin.id, account_create
             )
         else:
             raise AccountServiceError("Unknown account type")
 
+        await loops_service.user_update(admin, accountType=account.account_type)
+
         return account
 
     async def check_review_threshold(
-        self, session: AsyncSession, account: Account, new_transfer_amount: int
+        self, session: AsyncSession, account: Account
     ) -> Account:
         if account.is_active() or account.is_under_review():
             return account
 
         transfers_sum = await transaction_service.get_transactions_sum(
-            session, account.id, type=TransactionType.transfer
+            session, account.id, type=TransactionType.balance
         )
-        if (
-            transfers_sum + new_transfer_amount
-            >= settings.ACCOUNT_TRANSFERS_REVIEW_THRESHOLD
-        ):
+        if transfers_sum >= settings.ACCOUNT_BALANCE_REVIEW_THRESHOLD:
             account.status = Account.Status.UNDER_REVIEW
             session.add(account)
             await session.commit()
@@ -237,15 +237,18 @@ class AccountService(ResourceService[Account, AccountCreate, AccountUpdate]):
             raise AccountExternalIdDoesNotExist(stripe_account.id)
 
         account.email = stripe_account.email
-        account.country = stripe_account.country
         account.currency = stripe_account.default_currency
         account.is_details_submitted = stripe_account.details_submitted or False
         account.is_charges_enabled = stripe_account.charges_enabled or False
         account.is_payouts_enabled = stripe_account.payouts_enabled or False
+        if stripe_account.country is not None:
+            account.country = stripe_account.country
         account.data = stripe_account.to_dict()
 
         if all(
             (
+                not account.is_active(),
+                not account.is_under_review(),
                 account.currency is not None,
                 account.is_details_submitted,
                 account.is_charges_enabled,

@@ -2,10 +2,11 @@ from enum import Enum
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
-from sqlalchemy import Boolean, ForeignKey, String
+from sqlalchemy import Boolean, ForeignKey, Integer, String
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, declared_attr, mapped_column, relationship
 
+from polar.config import settings
 from polar.enums import AccountType
 from polar.kit.db.models import RecordModel
 from polar.kit.extensions.sqlalchemy import PostgresUUID, StringEnum
@@ -40,12 +41,28 @@ class Account(RecordModel):
 
     email: Mapped[str | None] = mapped_column(String(254), nullable=True, default=None)
 
-    country: Mapped[str | None] = mapped_column(String(2))
+    country: Mapped[str] = mapped_column(String(2), nullable=False)
     currency: Mapped[str | None] = mapped_column(String(3))
 
     is_details_submitted: Mapped[bool] = mapped_column(Boolean, nullable=False)
     is_charges_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False)
     is_payouts_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False)
+
+    processor_fees_applicable: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False
+    )
+    _platform_pledge_fee_percent: Mapped[int | None] = mapped_column(
+        Integer,
+        name="platform_pledge_fee_percent",
+        nullable=True,
+        default=None,
+    )
+    _platform_subscription_fee_percent: Mapped[int | None] = mapped_column(
+        Integer,
+        name="platform_subscription_fee_percent",
+        nullable=True,
+        default=None,
+    )
 
     business_type: Mapped[str | None] = mapped_column(
         String(255), nullable=True, default=None
@@ -74,9 +91,6 @@ class Account(RecordModel):
     def organizations(cls) -> Mapped[list["Organization"]]:
         return relationship("Organization", lazy="raise", back_populates="account")
 
-    def can_receive_transfers(self) -> bool:
-        return self.status in {Account.Status.UNREVIEWED, Account.Status.ACTIVE}
-
     def is_ready(self) -> bool:
         return self.status in {
             Account.Status.UNREVIEWED,
@@ -97,3 +111,15 @@ class Account(RecordModel):
         for organization in self.organizations:
             associations_names.append(organization.name)
         return associations_names
+
+    @property
+    def platform_pledge_fee_percent(self) -> int:
+        if self._platform_pledge_fee_percent is None:
+            return settings.PLEDGE_FEE_PERCENT
+        return self._platform_pledge_fee_percent
+
+    @property
+    def platform_subscription_fee_percent(self) -> int:
+        if self._platform_subscription_fee_percent is None:
+            return settings.SUBSCRIPTION_FEE_PERCENT
+        return self._platform_subscription_fee_percent

@@ -1,7 +1,7 @@
 import * as Plot from '@observablehq/plot'
 import { SubscriptionsStatisticsPeriod } from '@polar-sh/sdk'
 import { getCentsInDollarString } from 'polarkit/money'
-import { useCallback, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 
 const createAreaGradient = (id: string) => {
   // Create an SVG element
@@ -74,24 +74,31 @@ export interface ParsedSubscriptionsStatisticsPeriod
   parsedStartDate: Date
 }
 
-interface SubscriptionsChartProps {
-  data: ParsedSubscriptionsStatisticsPeriod[]
-  y: 'mrr' | 'subscribers'
+export interface ChartData {
+  parsedStartDate: Date
+}
+
+interface ChartProps<T extends ChartData, K extends keyof T> {
+  data: T[]
+  y: K
   axisYOptions: Plot.AxisYOptions
   onDataIndexHover?: (index: number | undefined) => void
   hoveredIndex?: number | undefined
+  maxHeight?: number
 }
 
 const primaryColor = 'rgb(0 98 255)'
 
-export const SubscriptionsChart: React.FC<SubscriptionsChartProps> = ({
+export function Chart<T extends ChartData, K extends keyof T>({
   data,
   y,
   axisYOptions,
   onDataIndexHover,
   hoveredIndex,
-}) => {
-  const containerRef = useRef<HTMLDivElement>(null)
+  maxHeight,
+}: ChartProps<T, K>) {
+  const [containerRef, setContainerRef] = useState<HTMLDivElement | null>(null)
+
   const gradientId = 'subscriptions-chart-gradient'
 
   const onMouseLeave = useCallback(() => {
@@ -100,8 +107,37 @@ export const SubscriptionsChart: React.FC<SubscriptionsChartProps> = ({
     }
   }, [onDataIndexHover])
 
+  const ratio = 200 / 480
+  const [width, setWidth] = useState(0)
+
   useEffect(() => {
-    if (!containerRef.current) {
+    const resizeObserver = new ResizeObserver((entries) => {
+      if (containerRef) {
+        setWidth(containerRef.clientWidth ?? 0)
+      }
+    })
+
+    if (containerRef) {
+      resizeObserver.observe(containerRef)
+    }
+
+    return () => {
+      if (containerRef) {
+        resizeObserver.unobserve(containerRef)
+      }
+    }
+  }, [containerRef])
+
+  const smallGraphAxisOpts = {
+    margin: 0,
+    labelOffset: 0,
+    tickSize: 0,
+    tickPadding: 0,
+    tickFormat: '',
+  }
+
+  useEffect(() => {
+    if (!containerRef) {
       return
     }
 
@@ -109,21 +145,26 @@ export const SubscriptionsChart: React.FC<SubscriptionsChartProps> = ({
       style: {
         background: 'none',
       },
-      height: 300,
+      height: maxHeight ?? width * ratio,
+      width: width || undefined,
       marks: [
         () => createAreaGradient(gradientId),
-        Plot.gridY(axisYOptions),
-        Plot.axisX({ ticks: 'month', label: null, stroke: 'none' }),
-        Plot.axisY(axisYOptions),
+        Plot.axisX({
+          ticks: 'month',
+          label: null,
+          stroke: 'none',
+          ...(width < 300 ? smallGraphAxisOpts : {}),
+        }),
+        Plot.axisY({ ...axisYOptions, margin: 0 }),
         Plot.areaY(data, {
           x: 'parsedStartDate',
-          y,
+          y: y.toString(),
           curve: 'bump-x',
           fill: `url(#${gradientId})`,
         }),
         Plot.lineY(data, {
           x: 'parsedStartDate',
-          y,
+          y: y.toString(),
           curve: 'bump-x',
           stroke: primaryColor,
           strokeWidth: 2,
@@ -134,7 +175,7 @@ export const SubscriptionsChart: React.FC<SubscriptionsChartProps> = ({
                 data,
                 Plot.pointerX({
                   x: 'parsedStartDate',
-                  y,
+                  y: y.toString(),
                   fill: primaryColor,
                   fillOpacity: 0.5,
                   r: 5,
@@ -143,11 +184,11 @@ export const SubscriptionsChart: React.FC<SubscriptionsChartProps> = ({
               ),
             ]
           : []),
-        ...(hoveredIndex
+        ...(hoveredIndex !== undefined
           ? [
               Plot.dot([data[hoveredIndex]], {
                 x: 'parsedStartDate',
-                y,
+                y: y.toString(),
                 fill: primaryColor,
                 fillOpacity: 0.5,
                 r: 5,
@@ -162,15 +203,15 @@ export const SubscriptionsChart: React.FC<SubscriptionsChartProps> = ({
           : []),
       ],
     })
-    containerRef.current.append(plot)
+    containerRef.append(plot)
 
     return () => plot.remove()
-  }, [data, y, axisYOptions, onDataIndexHover, hoveredIndex])
+  }, [data, y, axisYOptions, onDataIndexHover, hoveredIndex, width])
 
   return (
     <div
       className="dark:text-polar-500 text-gray-300"
-      ref={containerRef}
+      ref={setContainerRef}
       onMouseLeave={onMouseLeave}
     />
   )
@@ -188,7 +229,7 @@ export const SubscribersChart: React.FC<SubscribersChartProps> = ({
   hoveredIndex,
 }) => {
   return (
-    <SubscriptionsChart
+    <Chart
       data={data}
       y="subscribers"
       axisYOptions={{
@@ -213,7 +254,7 @@ export const MRRChart: React.FC<MRRChartProps> = ({
   hoveredIndex,
 }) => {
   return (
-    <SubscriptionsChart
+    <Chart
       data={data}
       y="mrr"
       axisYOptions={{

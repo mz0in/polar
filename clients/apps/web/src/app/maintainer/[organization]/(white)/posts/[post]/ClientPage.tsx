@@ -2,7 +2,7 @@
 
 import { PostEditor } from '@/components/Feed/PostEditor'
 import { DashboardBody } from '@/components/Layout/DashboardLayout'
-import DashboardTopbar from '@/components/Shared/DashboardTopbar'
+import DashboardTopbar from '@/components/Navigation/DashboardTopbar'
 import Spinner from '@/components/Shared/Spinner'
 import { captureEvent } from '@/utils/posthog'
 import { ArrowUpRightIcon } from '@heroicons/react/24/solid'
@@ -10,15 +10,19 @@ import { ArticleUpdate, ArticleVisibilityEnum } from '@polar-sh/sdk'
 import { AnimatePresence, motion } from 'framer-motion'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
-import { Button, Tabs } from 'polarkit/components/ui/atoms'
+import Button from 'polarkit/components/ui/atoms/button'
+import { Tabs } from 'polarkit/components/ui/atoms/tabs'
 import { Banner } from 'polarkit/components/ui/molecules'
 import { useArticleLookup, useUpdateArticle } from 'polarkit/hooks'
+import { organizationPageLink } from 'polarkit/utils/nav'
 import { useCallback, useEffect, useState } from 'react'
 
 const ClientPage = () => {
-  const { post: postSlug, organization: organizationName } = useParams()
   const params = useParams()
-  const post = useArticleLookup(organizationName as string, postSlug as string)
+  const post = useArticleLookup(
+    params?.organization as string,
+    params?.post as string,
+  )
   const [animateSaveBanner, setAnimateSaveBanner] = useState(false)
   const [isInSavedState, setIsInSavedState] = useState(false)
   const [tab, setTab] = useState(
@@ -97,7 +101,7 @@ const ClientPage = () => {
     return () => {
       window.removeEventListener('keydown', keyHandler)
     }
-  }, [handleSave, router, organizationName, postSlug])
+  }, [handleSave, router, params])
 
   if (!post.data) {
     return (
@@ -134,7 +138,10 @@ const ClientPage = () => {
             {isPublished ? 'Published' : 'Unpublished'}
           </span>
           <Link
-            href={`/${post.data.organization.name}/posts/${post.data.slug}`}
+            href={organizationPageLink(
+              post.data.organization,
+              `posts/${post.data.slug}`,
+            )}
             target="_blank"
           >
             <Button variant="secondary">

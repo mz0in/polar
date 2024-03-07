@@ -4,6 +4,7 @@ from enum import StrEnum
 from typing import Any, cast
 
 from sqlalchemy import Select, UnaryExpression, asc, desc, func, or_, select
+from sqlalchemy.exc import NoResultFound
 from sqlalchemy.orm import aliased, joinedload, subqueryload
 
 from polar.authz.service import AccessType, Authz
@@ -46,6 +47,7 @@ class TransactionService(BaseTransactionService):
         account_id: uuid.UUID | None = None,
         payment_user_id: uuid.UUID | None = None,
         payment_organization_id: uuid.UUID | None = None,
+        exclude_platform_fees: bool = False,
         pagination: PaginationParams,
         sorting: list[Sorting[SearchSortProperty]] = [
             (SearchSortProperty.created_at, True)
@@ -54,6 +56,8 @@ class TransactionService(BaseTransactionService):
         statement = self._get_readable_transactions_statement(user)
 
         statement = statement.options(
+            # Incurred transactions
+            subqueryload(Transaction.account_incurred_transactions),
             # Pledge
             subqueryload(Transaction.pledge).options(
                 # Pledge.issue
@@ -83,6 +87,8 @@ class TransactionService(BaseTransactionService):
             statement = statement.where(
                 Transaction.payment_organization_id == payment_organization_id
             )
+        if exclude_platform_fees:
+            statement = statement.where(Transaction.platform_fee_type.is_(None))
 
         order_by_clauses: list[UnaryExpression[Any]] = []
         for criterion, is_desc in sorting:
@@ -103,6 +109,8 @@ class TransactionService(BaseTransactionService):
         statement = (
             self._get_readable_transactions_statement(user)
             .options(
+                # Incurred transactions
+                subqueryload(Transaction.account_incurred_transactions),
                 # Pledge
                 subqueryload(Transaction.pledge).options(
                     # Pledge.issue
@@ -133,6 +141,9 @@ class TransactionService(BaseTransactionService):
                 .options(
                     joinedload(Subscription.subscription_tier),
                 ),
+                subqueryload(Transaction.paid_transactions).subqueryload(
+                    Transaction.account_incurred_transactions
+                ),
             )
             .where(Transaction.id == id)
         )
@@ -149,44 +160,47 @@ class TransactionService(BaseTransactionService):
         if not await authz.can(user, AccessType.read, account):
             raise NotPermitted()
 
-        statement = (
-            select(
-                Transaction.currency,
-                Transaction.account_currency,
-                cast(type[int], func.coalesce(func.sum(Transaction.amount), 0)),
-                cast(type[int], func.coalesce(func.sum(Transaction.account_amount), 0)),
-                cast(
-                    type[int],
-                    func.coalesce(
-                        func.sum(Transaction.amount).filter(
-                            Transaction.type == TransactionType.payout
-                        ),
-                        0,
+        statement = select(
+            cast(type[int], func.coalesce(func.sum(Transaction.amount), 0)),
+            cast(type[int], func.coalesce(func.sum(Transaction.account_amount), 0)),
+            cast(
+                type[int],
+                func.coalesce(
+                    func.sum(Transaction.amount).filter(
+                        Transaction.type == TransactionType.payout
                     ),
+                    0,
                 ),
-                cast(
-                    type[int],
-                    func.coalesce(
-                        func.sum(Transaction.account_amount).filter(
-                            Transaction.type == TransactionType.payout
-                        ),
-                        0,
+            ),
+            cast(
+                type[int],
+                func.coalesce(
+                    func.sum(Transaction.account_amount).filter(
+                        Transaction.type == TransactionType.payout
                     ),
+                    0,
                 ),
-            )
-            .where(Transaction.account_id == account.id)
-            .group_by(Transaction.currency, Transaction.account_currency)
-        )
+            ),
+        ).where(Transaction.account_id == account.id)
 
         result = await session.execute(statement)
-        (
-            currency,
-            account_currency,
-            amount,
-            account_amount,
-            payout_amount,
-            account_payout_amount,
-        ) = result.one()._tuple()
+
+        currency = "usd"  # FIXME: Main Polar currency
+        account_currency = account.currency
+        assert account_currency is not None
+
+        try:
+            (
+                amount,
+                account_amount,
+                payout_amount,
+                account_payout_amount,
+            ) = result.one()._tuple()
+        except NoResultFound:
+            amount = 0
+            account_amount = 0
+            payout_amount = 0
+            account_payout_amount = 0
 
         return TransactionsSummary(
             balance=TransactionsBalance(

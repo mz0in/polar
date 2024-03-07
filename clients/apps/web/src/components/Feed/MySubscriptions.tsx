@@ -2,7 +2,8 @@ import { MoreVertOutlined } from '@mui/icons-material'
 import { SubscriptionSubscriber } from '@polar-sh/sdk'
 import Link from 'next/link'
 import { api } from 'polarkit'
-import { Avatar, Button } from 'polarkit/components/ui/atoms'
+import Avatar from 'polarkit/components/ui/atoms/avatar'
+import Button from 'polarkit/components/ui/atoms/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,7 +12,7 @@ import {
 } from 'polarkit/components/ui/dropdown-menu'
 import { useOrganization } from 'polarkit/hooks'
 import { useCallback, useState } from 'react'
-import { ConfirmModal } from '../Shared/ConfirmModal'
+import { ConfirmModal } from '../Modal/ConfirmModal'
 
 export interface MySubscriptionsProps {
   subscriptions: SubscriptionSubscriber[]
@@ -89,7 +90,10 @@ const SubscriptionOrganizationItem = ({
               align="end"
               className="dark:bg-polar-800 bg-gray-50 shadow-lg"
             >
-              <DropdownMenuItem onClick={() => setShowCancelModal(true)} className="cursor-pointer">
+              <DropdownMenuItem
+                onClick={() => setShowCancelModal(true)}
+                className="cursor-pointer"
+              >
                 Unsubscribe
               </DropdownMenuItem>
             </DropdownMenuContent>

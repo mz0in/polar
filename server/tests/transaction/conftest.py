@@ -12,6 +12,7 @@ from polar.models import (
     Transaction,
     User,
 )
+from polar.models.pledge import PledgeType
 from polar.models.transaction import PaymentProcessor, TransactionType
 from polar.postgres import AsyncSession
 from tests.fixtures.random_objects import (
@@ -27,8 +28,9 @@ async def create_transaction(
     account: Account | None = None,
     payment_user: User | None = None,
     payment_organization: Organization | None = None,
-    type: TransactionType = TransactionType.transfer,
+    type: TransactionType = TransactionType.balance,
     amount: int = 1000,
+    account_currency: str = "eur",
     pledge: Pledge | None = None,
     issue_reward: IssueReward | None = None,
     subscription: Subscription | None = None,
@@ -39,10 +41,9 @@ async def create_transaction(
         processor=PaymentProcessor.stripe,
         currency="usd",
         amount=amount,
-        account_currency="eur",
-        account_amount=int(amount * 0.9),
+        account_currency=account_currency,
+        account_amount=int(amount * 0.9) if account_currency != "usd" else amount,
         tax_amount=0,
-        processor_fee_amount=0,
         account=account,
         payment_user=payment_user,
         payment_organization=payment_organization,
@@ -56,19 +57,26 @@ async def create_transaction(
     return transaction
 
 
-@pytest_asyncio.fixture
-async def account(
-    session: AsyncSession, organization: Organization, user: User
+async def create_account(
+    session: AsyncSession,
+    organization: Organization,
+    user: User,
+    *,
+    country: str = "US",
+    currency: str = "usd",
+    account_type: AccountType = AccountType.stripe,
+    processor_fees_applicable: bool = False,
 ) -> Account:
     account = Account(
         status=Account.Status.ACTIVE,
-        account_type=AccountType.stripe,
+        account_type=account_type,
         admin_id=user.id,
-        country="US",
-        currency="usd",
+        country=country,
+        currency=currency,
         is_details_submitted=True,
         is_charges_enabled=True,
         is_payouts_enabled=True,
+        processor_fees_applicable=processor_fees_applicable,
     )
     session.add(account)
     organization.account = account
@@ -78,13 +86,27 @@ async def account(
 
 
 @pytest_asyncio.fixture
+async def account(
+    session: AsyncSession, organization: Organization, user: User
+) -> Account:
+    return await create_account(session, organization, user)
+
+
+@pytest_asyncio.fixture
 async def transaction_pledge(
     session: AsyncSession,
     organization: Organization,
     repository: Repository,
     issue: Issue,
 ) -> Pledge:
-    return await create_pledge(session, organization, repository, issue, organization)
+    return await create_pledge(
+        session,
+        organization,
+        repository,
+        issue,
+        organization,
+        type=PledgeType.pay_on_completion,
+    )
 
 
 @pytest_asyncio.fixture
@@ -121,16 +143,31 @@ async def account_transactions(
     return [
         await create_transaction(
             session,
+            type=TransactionType.balance,
+            account_currency="usd",
             account=account,
             pledge=transaction_pledge,
             issue_reward=transaction_issue_reward,
         ),
         await create_transaction(
-            session, account=account, subscription=transaction_subscription
+            session,
+            type=TransactionType.balance,
+            account_currency="usd",
+            account=account,
+            subscription=transaction_subscription,
         ),
-        await create_transaction(session, account=account),
         await create_transaction(
-            session, account=account, type=TransactionType.payout, amount=-3000
+            session,
+            type=TransactionType.balance,
+            account_currency="usd",
+            account=account,
+        ),
+        await create_transaction(
+            session,
+            type=TransactionType.payout,
+            account_currency="eur",
+            account=account,
+            amount=-3000,
         ),
     ]
 

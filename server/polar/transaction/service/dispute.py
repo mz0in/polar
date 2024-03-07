@@ -10,8 +10,11 @@ from polar.models import Transaction
 from polar.models.transaction import PaymentProcessor, TransactionType
 from polar.postgres import AsyncSession
 
+from .balance import balance_transaction as balance_transaction_service
 from .base import BaseTransactionService, BaseTransactionServiceError
-from .transfer import transfer_transaction as transfer_transaction_service
+from .processor_fee import (
+    processor_fee_transaction as processor_fee_transaction_service,
+)
 
 
 class DisputeTransactionError(BaseTransactionServiceError):
@@ -40,12 +43,6 @@ class DisputeTransactionService(BaseTransactionService):
         if payment_transaction is None:
             raise DisputeUnknownPaymentTransaction(dispute.id, charge_id)
 
-        balance_transaction = next(
-            bt
-            for bt in dispute.balance_transactions
-            if bt.reporting_category == "dispute"
-        )
-
         dispute_amount = dispute.amount
         total_amount = payment_transaction.amount + payment_transaction.tax_amount
         tax_refund_amount = abs(
@@ -65,7 +62,6 @@ class DisputeTransactionService(BaseTransactionService):
             tax_amount=-tax_refund_amount,
             tax_country=payment_transaction.tax_country,
             tax_state=payment_transaction.tax_state,
-            processor_fee_amount=balance_transaction.fee,  # Damn expensive dispute fees
             customer_id=payment_transaction.customer_id,
             charge_id=charge_id,
             dispute_id=dispute.id,
@@ -75,29 +71,29 @@ class DisputeTransactionService(BaseTransactionService):
             issue_reward_id=payment_transaction.issue_reward_id,
             subscription_id=payment_transaction.subscription_id,
         )
+
+        # Compute and link fees
+        transaction_fees = await processor_fee_transaction_service.create_dispute_fees(
+            session, dispute_transaction=dispute_transaction, category="dispute"
+        )
+        dispute_transaction.incurred_transactions = transaction_fees
+
         session.add(dispute_transaction)
 
-        # Create reversal transfers if it was already transferred
-        transfer_transactions_couples = (
-            await self._get_transfer_transactions_for_payment(
-                session, payment_transaction=payment_transaction
-            )
+        # Create reversal balances if it was already balanced
+        balance_transactions_couples = await self._get_balance_transactions_for_payment(
+            session, payment_transaction=payment_transaction
         )
-        for transfer_transactions_couple in transfer_transactions_couples:
-            outgoing, _ = transfer_transactions_couple
-            # Refund each transfer proportionally
-            transfer_refund_amount = abs(
+        for balance_transactions_couple in balance_transactions_couples:
+            outgoing, _ = balance_transactions_couple
+            # Refund each balance proportionally
+            balance_refund_amount = abs(
                 int(math.floor(outgoing.amount * dispute_amount) / total_amount)
             )
-            await transfer_transaction_service.create_reversal_transfer(
+            await balance_transaction_service.create_reversal_balance(
                 session,
-                transfer_transactions=transfer_transactions_couple,
-                destination_currency=dispute.currency,
-                amount=transfer_refund_amount,
-                reversal_transfer_metadata={
-                    "stripe_charge_id": charge_id,
-                    "stripe_dispute_id": dispute.id,
-                },
+                balance_transactions=balance_transactions_couple,
+                amount=balance_refund_amount,
             )
 
         await session.commit()
@@ -113,12 +109,6 @@ class DisputeTransactionService(BaseTransactionService):
         )
         if payment_transaction is None:
             raise DisputeUnknownPaymentTransaction(dispute.id, charge_id)
-
-        balance_transaction = next(
-            bt
-            for bt in dispute.balance_transactions
-            if bt.reporting_category == "dispute_reversal"
-        )
 
         dispute_amount = dispute.amount
         total_amount = payment_transaction.amount + payment_transaction.tax_amount
@@ -139,7 +129,6 @@ class DisputeTransactionService(BaseTransactionService):
             tax_amount=tax_amount,
             tax_country=payment_transaction.tax_country,
             tax_state=payment_transaction.tax_state,
-            processor_fee_amount=balance_transaction.fee,  # Normally zero (hopefully!)
             customer_id=payment_transaction.customer_id,
             charge_id=charge_id,
             dispute_id=dispute.id,
@@ -149,54 +138,58 @@ class DisputeTransactionService(BaseTransactionService):
             issue_reward_id=payment_transaction.issue_reward_id,
             subscription_id=payment_transaction.subscription_id,
         )
+
+        # Compute and link fees
+        transaction_fees = await processor_fee_transaction_service.create_dispute_fees(
+            session,
+            dispute_transaction=dispute_transaction,
+            category="dispute_reversal",
+        )
+        dispute_transaction.incurred_transactions = transaction_fees
+
         session.add(dispute_transaction)
 
-        # Re-transfer if it was reversed
-        reverse_transfer_transactions_couples = (
-            await self._get_reverse_transfer_transactions_for_payment(
+        # Re-balance if it was reversed
+        reverse_balance_transactions_couples = (
+            await self._get_reverse_balance_transactions_for_payment(
                 session, payment_transaction=payment_transaction
             )
         )
-        for (
-            reverse_transfer_transactions_couple
-        ) in reverse_transfer_transactions_couples:
-            outgoing, _ = reverse_transfer_transactions_couple
+        for reverse_balance_transactions_couple in reverse_balance_transactions_couples:
+            outgoing, _ = reverse_balance_transactions_couple
             assert outgoing.account is not None
-            await transfer_transaction_service.create_transfer(
+            await balance_transaction_service.create_balance(
                 session,
+                source_account=None,
                 destination_account=outgoing.account,
                 payment_transaction=payment_transaction,
                 amount=abs(outgoing.amount),
                 pledge=outgoing.pledge,
                 subscription=outgoing.subscription,
                 issue_reward=outgoing.issue_reward,
-                transfer_metadata={
-                    "stripe_charge_id": charge_id,
-                    "stripe_dispute_id": dispute.id,
-                },
             )
 
         await session.commit()
 
         return dispute_transaction
 
-    async def _get_reverse_transfer_transactions_for_payment(
+    async def _get_reverse_balance_transactions_for_payment(
         self, session: AsyncSession, *, payment_transaction: Transaction
     ) -> list[tuple[Transaction, Transaction]]:
-        transfer_transactions_statement = select(Transaction.id).where(
-            Transaction.type == TransactionType.transfer,
+        balance_transactions_statement = select(Transaction.id).where(
+            Transaction.type == TransactionType.balance,
             Transaction.payment_transaction_id == payment_transaction.id,
         )
         statement = (
             select(Transaction)
             .where(
-                Transaction.type == TransactionType.transfer,
-                Transaction.transfer_reversal_transaction_id.in_(
-                    transfer_transactions_statement
+                Transaction.type == TransactionType.balance,
+                Transaction.balance_reversal_transaction_id.in_(
+                    balance_transactions_statement
                 ),
             )
             .order_by(
-                Transaction.transfer_correlation_key,
+                Transaction.balance_correlation_key,
                 Transaction.account_id.nulls_last(),
             )
             .options(
@@ -212,7 +205,7 @@ class DisputeTransactionService(BaseTransactionService):
         return [
             (t1, t2)
             for _, (t1, t2) in itertools.groupby(
-                transactions, key=lambda t: t.transfer_correlation_key
+                transactions, key=lambda t: t.balance_correlation_key
             )
         ]
 

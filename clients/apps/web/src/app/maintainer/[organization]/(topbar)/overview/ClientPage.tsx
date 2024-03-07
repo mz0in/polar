@@ -12,7 +12,11 @@ import {
 import { FlagOutlined } from '@mui/icons-material'
 import { Organization, SubscriptionsStatisticsPeriod } from '@polar-sh/sdk'
 import { api } from 'polarkit'
-import { Card, CardContent, CardHeader } from 'polarkit/components/ui/atoms'
+import {
+  Card,
+  CardContent,
+  CardHeader,
+} from 'polarkit/components/ui/atoms/card'
 import React, { useEffect, useMemo, useState } from 'react'
 import { CreatorUpsell } from './CreatorUpsell'
 
@@ -67,7 +71,7 @@ const OverviewPage: React.FC<OverviewPageProps> = ({
 
   return (
     <DashboardBody className="flex flex-col gap-y-8 pb-24 md:gap-y-20">
-      <div className="grid grid-cols-1 gap-x-8 gap-y-4 md:grid-cols-3">
+      <div className="grid grid-cols-1 gap-x-8 gap-y-4 lg:grid-cols-3">
         <SubscribersMetric data={statisticsPeriods?.subscribers ?? 0} />
         <MRRMetric data={statisticsPeriods?.mrr ?? 0} />
         <Card className="shadow-sm">

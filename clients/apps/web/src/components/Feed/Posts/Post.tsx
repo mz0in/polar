@@ -5,8 +5,9 @@ import { Article } from '@polar-sh/sdk'
 import { motion, useSpring, useTransform } from 'framer-motion'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Avatar, Button } from 'polarkit/components/ui/atoms'
-import { ButtonProps } from 'polarkit/components/ui/button'
+import Avatar from 'polarkit/components/ui/atoms/avatar'
+import Button, { ButtonProps } from 'polarkit/components/ui/atoms/button'
+import { organizationPageLink } from 'polarkit/utils/nav'
 import { PropsWithChildren, useCallback, useEffect, useRef } from 'react'
 import { useHoverDirty } from 'react-use'
 import { twMerge } from 'tailwind-merge'
@@ -18,7 +19,7 @@ type FeedPost = {
 }
 
 const articleHref = (art: Article): string => {
-  return `/${art.organization.name}/posts/${art.slug}`
+  return organizationPageLink(art.organization, `posts/${art.slug}`)
 }
 
 export const Post = (props: FeedPost) => {
@@ -33,7 +34,7 @@ export const Post = (props: FeedPost) => {
   return (
     <div
       className={twMerge(
-        'dark:border-polar-800 hover:dark:bg-polar-800/60 dark:bg-polar-900 flex w-full flex-col justify-start gap-4 rounded-3xl bg-white px-6 pb-6 pt-8 shadow-sm transition-all duration-100 dark:border md:flex-row',
+        'dark:border-polar-800 hover:dark:bg-polar-800/60 dark:bg-polar-900 flex w-full flex-col justify-start gap-6 rounded-3xl border border-gray-100 bg-white px-8 pb-8 pt-10 shadow-sm transition-all duration-100 md:flex-row',
         props.article.paid_subscribers_only &&
           'border border-blue-50 bg-gradient-to-b from-blue-50/80 to-transparent hover:from-blue-100 dark:from-blue-800/20 dark:hover:from-blue-800/30',
       )}
@@ -48,7 +49,7 @@ export const Post = (props: FeedPost) => {
       }}
     >
       <Avatar
-        className="hidden h-10 w-10 md:block"
+        className="hidden h-12 w-12 md:block"
         avatar_url={props.article.byline.avatar_url}
         name={props.article.byline.name}
       />
@@ -64,15 +65,15 @@ const PostHeader = (props: FeedPost & { isHovered: boolean }) => {
   return (
     <div className="flex w-full flex-row items-center gap-x-4 text-sm md:justify-between">
       <Avatar
-        className="block h-10 w-10 md:hidden"
+        className="block h-12 w-12 md:hidden"
         avatar_url={props.article.byline.avatar_url}
         name={props.article.byline.name}
       />
-      <div className="flex flex-col gap-y-0.5">
+      <div className="flex flex-col gap-y-1 pt-1">
         <div className="dark:text-polar-400 flex flex-row flex-nowrap items-center gap-x-2 text-gray-500 ">
           <Link
             className="flex min-w-0 flex-grow flex-row items-center gap-x-2 truncate"
-            href={`/${props.article.organization.name}`}
+            href={organizationPageLink(props.article.organization)}
             onClick={(e) => e.stopPropagation()}
           >
             <h3 className="text-blue-500 hover:text-blue-600 dark:text-blue-400 hover:dark:text-blue-500">
@@ -141,13 +142,13 @@ const PostBody = (props: FeedPost & { isHovered: boolean }) => {
       )}
     >
       <Link
-        className="dark:text-polar-50 hover:dark:text-polar-100 flex flex-col flex-wrap pt-2 text-lg font-medium text-gray-950 hover:text-gray-900"
+        className="dark:text-polar-50 hover:dark:text-polar-100 flex flex-col flex-wrap pt-2 text-2xl font-medium text-gray-950 [text-wrap:pretty] hover:text-gray-900"
         href={articleHref(props.article)}
       >
         {props.article.title}
       </Link>
       <div className="flex flex-col flex-wrap">
-        <div className="prose prose-headings:first:mt-0 prose-p:first:mt-0 prose-img:first:mt-0 prose-p:last:mb-0 dark:prose-pre:bg-polar-800 prose-pre:bg-gray-100 dark:prose-invert prose-pre:rounded-2xl dark:prose-headings:text-white prose-p:text-gray-700 prose-img:rounded-2xl dark:prose-p:text-polar-200 dark:text-polar-200 prose-a:text-blue-500 hover:prose-a:text-blue-400 dark:hover:prose-a:text-blue-300 dark:prose-a:text-blue-400 prose-a:no-underline prose-code:before:content-none prose-code:after:content-none prose-code:bg-gray-100 dark:prose-code:bg-polar-700 prose-code:font-normal prose-code:rounded-sm prose-code:px-1.5 prose-code:py-1 w-full max-w-none text-gray-600">
+        <div className="prose dark:prose-pre:bg-polar-800 prose-headings:font-medium prose-pre:bg-gray-100 dark:prose-invert prose-pre:rounded-2xl dark:prose-headings:text-white prose-p:text-gray-700 prose-img:rounded-2xl dark:prose-p:text-polar-200 dark:text-polar-200 prose-a:text-blue-500 hover:prose-a:text-blue-400 dark:hover:prose-a:text-blue-300 dark:prose-a:text-blue-400 prose-a:no-underline prose-code:before:content-none prose-code:after:content-none prose-code:bg-gray-100 dark:prose-code:bg-polar-700 prose-code:font-normal prose-code:rounded-sm prose-code:px-1.5 prose-code:py-1 w-full max-w-none text-gray-600">
           <AbbreviatedBrowserRender article={props.article} />
         </div>
       </div>

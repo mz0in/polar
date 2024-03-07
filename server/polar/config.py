@@ -31,6 +31,10 @@ class Settings(BaseSettings):
 
     SECRET: str = "super secret jwt secret"
 
+    # Custom domain auth and exchange secrets
+    CUSTOM_DOMAIN_JWT_KEY: str = "SETME! secret key used for custom domain auth"
+    CUSTOM_DOMAIN_FORWARD_SECRET: str = "SETME! pre shared secret for exchanging a JWT to a auth JWT"  # pre shared key with the nextjs web app
+
     # JSON list of accepted CORS origins
     CORS_ORIGINS: list[str] = []
 
@@ -104,6 +108,9 @@ class Settings(BaseSettings):
     # Loops
     LOOPS_API_KEY: str | None = None
 
+    # Prometheus
+    PROMETHEUS_EXPORTER_HTTP_PASSWORD: str = ""
+
     # Application behaviours
     API_PAGINATION_MAX_LIMIT: int = 100
 
@@ -115,7 +122,7 @@ class Settings(BaseSettings):
     EMAIL_SENDER: EmailSender = EmailSender.logger
     RESEND_API_KEY: str = ""
 
-    ACCOUNT_TRANSFERS_REVIEW_THRESHOLD: int = 10000
+    ACCOUNT_BALANCE_REVIEW_THRESHOLD: int = 10000
 
     SUBSCRIPTION_FEE_PERCENT: int = 5
     PLEDGE_FEE_PERCENT: int = 5
